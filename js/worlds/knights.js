@@ -3,6 +3,44 @@ import * as THREE from '../../vendor/three.module.min.js';
 import { exitPortal } from './common.js';
 import { pathRide, part } from '../rides.js';
 
+// Fasst die einfarbigen Klötzchen jeder Gruppe zu einem Mesh zusammen (weniger Draw-Calls).
+// Untergruppen (bewegte Gelenke) bleiben erhalten und werden einzeln zusammengefasst.
+function bake(root) {
+  root.updateMatrixWorld(true);
+  const groups = [];
+  root.traverse((o) => { if (!o.isMesh && !o.isSprite) groups.push(o); });
+  const m = new THREE.Matrix4(), inv = new THREE.Matrix4(), nm = new THREE.Matrix3(), v = new THREE.Vector3();
+  for (const grp of groups) {
+    const meshes = grp.children.filter((c) => c.isMesh && c.material?.isMeshLambertMaterial && !c.material.map && !c.material.transparent && c.material.emissive.getHex() === 0);
+    if (meshes.length < 2) continue;
+    inv.copy(grp.matrixWorld).invert();
+    const pos = [], nor = [], col = [];
+    for (const mesh of meshes) {
+      m.multiplyMatrices(inv, mesh.matrixWorld);
+      nm.getNormalMatrix(m);
+      const g = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry;
+      const P = g.attributes.position, N = g.attributes.normal, c = mesh.material.color;
+      for (let i = 0; i < P.count; i++) {
+        v.fromBufferAttribute(P, i).applyMatrix4(m); pos.push(v.x, v.y, v.z);
+        v.fromBufferAttribute(N, i).applyMatrix3(nm).normalize(); nor.push(v.x, v.y, v.z);
+        col.push(c.r, c.g, c.b);
+      }
+      if (g !== mesh.geometry) g.dispose();
+      grp.remove(mesh);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    geo.computeBoundingSphere();
+    const out = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
+    out.castShadow = true;
+    out.receiveShadow = true;
+    grp.add(out);
+  }
+  return root;
+}
+
 const G = 0.5;   // flaches Land
 const HT = 5;    // Burgberg (Plateau)
 const hash = (i, j) => { const s = Math.sin(i * 127.1 + j * 311.7) * 43758.5453; return s - Math.floor(s); };
@@ -196,7 +234,7 @@ export const knights = {
     for (let i = -1.5; i <= 1.5; i += 1) w.box(0.9, 0.06, 4.2, '#a0764e', i, HT + 0.18, -17);
     for (const s of [-1, 1]) w.box(0.12, 0.12, 5.4, '#3b3b3b', s * 1.9, HT + 3.2, -17.6, 0, 0.62);
     // Burgfried mit Wendeltreppe
-    const peak = w.spiralTower({ x: 0, z: -33, y: HT, r: 4.4, n: 16, rise: 1.1, size: 2.4, a0: Math.PI / 2, da: 0.66, colors: ['#9aa0a8', '#8a8f98'], column: stoneD, colW: 6, top: '#6b7079', topSize: 8, starId: 'keep', label: 'Burgfried' });
+    const peak = w.spiralTower({ x: 0, z: -33, y: HT, r: 5.6, n: 16, rise: 1.1, size: 2.4, a0: Math.PI / 2, da: 0.66, colors: ['#9aa0a8', '#8a8f98'], column: stoneD, colW: 6, top: '#6b7079', topSize: 8, starId: 'keep', label: 'Burgfried' });
     for (let i = 0; i < 8; i++) {
       const u = -3.5 + i;
       if (i % 2 === 0) { w.box(0.8, 0.9, 0.5, stoneD, u, peak + 0.45, -33 - 3.75); w.box(0.8, 0.9, 0.5, stoneD, u, peak + 0.45, -33 + 3.75); w.box(0.5, 0.9, 0.8, stoneD, -3.75, peak + 0.45, -33 + u); w.box(0.5, 0.9, 0.8, stoneD, 3.75, peak + 0.45, -33 + u); }
@@ -213,6 +251,7 @@ export const knights = {
 
     // ---------- Stern: Drachenflug ----------
     const dragon = makeDragon();
+    bake(dragon.g);
     w.addRide(pathRide(w, {
       points: [[-12, G + 1.2, 2], [-16, 6, -5], [-24, 12, -16], [-30, 18, -32], [-22, 22, -50], [0, 25, -58], [22, 22, -50], [32, 20, -32],
         [26, 18, -12], [12, 16, 0], [-4, 15, 8], [-24, 13, 24], [-40, 11, 16], [-36, 8, 4], [-24, 4, 2], [-15, G + 1.4, 3.5]],
@@ -252,6 +291,7 @@ export const knights = {
     const steedLegs = makeHorse(steed, '#f2ece0', '#2f5fd6', '#ffd23f');
     part(steed, 0.08, 2.6, 0.08, '#7a4a2a', 0.6, 2.6, 0.3);
     part(steed, 0.05, 0.6, 1.0, '#ffd23f', 0.6, 3.6, -0.2);
+    bake(steed);
     const jz = 17.2, jz2 = 20.8;
     w.addRide(pathRide(w, {
       points: [[x1 - 2, G, jz], [x1 + 6, G, jz], [x1 + 14, G, jz], [x1 + 22, G, jz], [x2 - 1, G, jz], [x2 + 1.6, G, lz], [x2 - 1, G, jz2],
@@ -266,7 +306,7 @@ export const knights = {
       const g = new THREE.Group();
       const legs = makeHorse(g, hc, bl, tr);
       makeKnight(g, tab, tr === '#ffffff' ? '#2f9a4a' : '#ffd23f');
-      w.add(g);
+      w.add(bake(g));
       riders.push({ g, legs, z, ph });
     });
     w.updaters.push((dt, t) => {
@@ -283,8 +323,7 @@ export const knights = {
     // ---------- Stern: Schatzkammer-Labyrinth ----------
     const { x0, z0, C, S } = MAZE;
     w.box(C * S, 0.06, C * S, '#3a3640', x0 + C * S / 2, G + 0.04, z0 + C * S / 2);
-    const mazeMat = new THREE.MeshLambertMaterial({ color: '#6b6f78', map: w.root.children.find((m) => m.material?.map)?.material.map });
-    w.maze({ x0, z0, C, S, H: 3.8, color: '#6b6f78', mat: mazeMat, label: 'Schatzkammer', starId: 'dungeon', starLabel: 'Schatzkammer', y: G, row: 3 });
+    w.maze({ x0, z0, C, S, H: 3.8, color: '#6b6f78', label: 'Schatzkammer', starId: 'dungeon', starLabel: 'Schatzkammer', y: G, row: 3 });
     const ms = w.stars[w.stars.length - 1].pos;
     for (let i = 0; i < 7; i++) w.box(0.4, 0.25, 0.6, '#ffd23f', ms.x + w.r(-1.1, 1.1), G + 0.15, ms.z + w.r(-1.1, 1.1), w.r(0, 3));
     w.box(1.2, 0.7, 0.8, '#8a5a2b', ms.x + 0.6, G + 0.35, ms.z - 0.9); w.box(1.25, 0.3, 0.85, '#ffd23f', ms.x + 0.6, G + 0.8, ms.z - 0.9);
@@ -335,7 +374,7 @@ export const knights = {
       sails.add(arm);
     }
     part(sails, 0.7, 0.7, 0.6, '#3b3b3b', 0, 0, 0);
-    w.add(sails);
+    w.add(bake(sails));
     w.updaters.push((dt) => { sails.rotation.z -= dt * 0.8; });
     w.sign('Mühle', MX, G + 13.6, MZ, { bg: '#7a4a2a', fg: '#ffe9b0', size: 0.8 });
     for (let z = -50; z < -14; z += 4) for (let x = -56; x < -34; x += 1.6) {
@@ -360,7 +399,7 @@ export const knights = {
     w.sign('Pferdekoppel', 26, G + 3, 44, { bg: '#7a4a2a', fg: '#ffe9b0', size: 0.8 });
 
     // ---------- Bäume, Büsche, Blumen ----------
-    const avoid = [[-58, -58, 34, -10], [-54, -2, -10, 38], [16, 6, 56, 34], [24, 34, 54, 54], [-6, -12, 6, 58], [-20, 38, -12, 50], [-16, -2, -2, 10], [31, -52, 58, -24]];
+    const avoid = [[-58, -58, 34, -10], [-54, -2, -10, 38], [16, 6, 56, 34], [24, 34, 54, 54], [-6, -12, 6, 58], [-20, 38, -12, 50], [-18, -4, -1, 13], [31, -52, 58, -24]];
     const inAvoid = (x, z) => avoid.some(([a, b, c, d]) => x >= a && x <= c && z >= b && z <= d);
     let placed = 0;
     for (let k = 0; k < 800 && placed < 38; k++) {
@@ -371,8 +410,11 @@ export const knights = {
       w.tree(w.pick(['oak', 'oak', 'pine', 'birch']), x, z, w.r(0.9, 1.3), G);
       placed++;
     }
-    for (const [x, z] of [[-8, 20], [8, 30], [-12, 34], [10, 42]]) w.flowers(x, z, 5, 4, 14, ['#ff595e', '#ffd23f', '#ffffff', '#b07bff']);
-    for (const c of w.decoList.slice(-56)) c.y += G;
+    for (const [cx, cz] of [[-8, 20], [8, 30], [-12, 34], [10, 42], [-24, 44], [20, 2]]) for (let i = 0; i < 14; i++) {
+      const x = cx + w.r(-2.5, 2.5), z = cz + w.r(-2, 2);
+      w.box(0.08, 0.4, 0.08, '#3c8c3c', x, G + 0.2, z);
+      w.box(0.3, 0.2, 0.3, w.pick(['#ff595e', '#ffd23f', '#ffffff', '#b07bff']), x, G + 0.48, z);
+    }
 
     // ---------- Tiere ----------
     const V = (x, z) => new THREE.Vector3(x, 0, z);
@@ -392,10 +434,11 @@ export const knights = {
     w.coinRing(-30, G, 16, 5, 8);
     w.coinLine(24, 15.4, 48, 15.4, 6, G);
     w.coinLine(-50, -48, -50, -18, 5, G);
-    w.coinLine(4, HT, -26, 4, 4 * 0 + 1, HT);
-    w.coinLine(-11, -28, 11, -28, 4, HT);
+    w.coin(0, HT + 0.4, -17);
+    w.coinLine(-11, -23, 11, -23, 5, HT);
     w.coinLine(30, 40, 30, 50, 3, G);
     w.coinLine(-24, 38, -40, 38, 4, G);
     for (const c of w.coins) c.mesh.castShadow = false;
+    for (const a of w.animals) bake(a.g);
   },
 };

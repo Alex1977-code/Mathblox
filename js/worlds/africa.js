@@ -3,16 +3,7 @@
 import * as THREE from '../../vendor/three.module.min.js';
 import { exitPortal } from './common.js';
 import { pathRide, part } from '../rides.js';
-import { collider, solidBox, studBlocks, groundPath, groundFlowers, tufts, stone, coinsAt, coinTrail, beast, compact, V } from './africa-kit.js';
-
-const smooth = (t) => t * t * (3 - 2 * t);
-const clamp01 = (t) => Math.min(1, Math.max(0, t));
-const edgeDist = (x, z) => Math.pow(Math.pow(Math.abs(x) / 60, 4) + Math.pow(Math.abs(z) / 60, 4), 0.25) * 60;
-const rectDist = (x, z, [x1, z1, x2, z2]) => Math.hypot(Math.max(x1 - x, 0, x - x2), Math.max(z1 - z, 0, z - z2));
-function segDist(x, z, [ax, az], [bx, bz]) {
-  const dx = bx - ax, dz = bz - az, t = clamp01(((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz));
-  return Math.hypot(x - ax - dx * t, z - az - dz * t);
-}
+import { collider, solidBox, studBlocks, groundPath, groundFlowers, tufts, stone, coinsAt, coinTrail, beast, compact, stepMountain, smooth, clamp01, edgeDist, rectDist, segDist, hash, V } from './africa-kit.js';
 
 // Flache Bauplätze: Spawn-Korridor, Mitte, Markt, Dorf, Ägypten, Affenbrotbaum
 const FLAT = [[-10, 8, 10, 62], [-16, -16, 16, 12], [12, 18, 48, 46], [-52, 14, -16, 50], [0, -56, 56, -10], [-52, -52, -20, -16]];
@@ -33,8 +24,6 @@ function height(x, z) {
   const hills = 1.4 + 1.4 * Math.sin(x * 0.1 + 0.5) * Math.cos(z * 0.085 - 0.3) + 0.9 * Math.sin((x + z) * 0.06 + 1);
   return 1 + wgt * Math.max(0, hills);
 }
-
-function hash(x, z) { const s = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453; return s - Math.floor(s); }
 
 function color(x, z, h) {
   const e = edgeDist(x, z), r = hash(x, z);
@@ -66,12 +55,7 @@ export const africa = {
     const SB = studBlocks(w);
 
     // ---------- Kilimandscharo (weit im Norden, Stufen-Berg mit Schneekappe) ----------
-    const mountain = (cx, cz, tiers, base) => {
-      tiers.forEach(([r, h, c], i) => {
-        const y = base + tiers.slice(0, i).reduce((s, t) => s + t[1], 0);
-        for (const a of [0, Math.PI / 6, Math.PI / 3]) w.box(r * 1.9, h, r * 1.9, c, cx, y + h / 2, cz, a);
-      });
-    };
+    const mountain = (cx, cz, tiers, base) => stepMountain(w, cx, cz, tiers, base);
     mountain(-14, -205, [[78, 6, '#8a7a55'], [70, 6, '#83744f'], [62, 6, '#7d7050'], [54, 6, '#6f6a4c'], [46, 6, '#6a6250'], [39, 5, '#77706a'], [33, 5, '#8a8580'], [28, 4, '#e8eef8'], [24, 4, '#f4f8ff'], [19, 3, '#ffffff']], -2);
     for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2; w.box(9, 5, 4, '#eef4ff', -14 + Math.cos(a) * 31, 42, -205 + Math.sin(a) * 31, Math.PI / 2 - a); }
     mountain(50, -190, [[30, 7, '#7d7050'], [23, 7, '#6f6a4c'], [16, 7, '#6a6250'], [10, 6, '#8a8580'], [5, 4, '#f4f8ff']], -2);

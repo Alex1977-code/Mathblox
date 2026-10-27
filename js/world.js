@@ -4,6 +4,7 @@ import * as THREE from '../vendor/three.module.min.js';
 import { blockMat, blockGeometry, textSprite, disposeTree, studTexture } from './blocks.js';
 import { makeAnimal, updateAnimal, heartBurst } from './animals.js';
 import { seededRng } from './math.js';
+import { makeCar, missionMarker } from './driving.js';
 
 // Portale zurück zu einer Insel (Hub) sind frei, alle anderen verlangen eine Eintrittskarte
 const WORLD_FREE = (target, def) => target === 'hub' || (target === 'worldtour' && !def.isHub);
@@ -90,6 +91,8 @@ export class World {
     this.portals = [];
     this.animals = [];
     this.rides = [];
+    this.cars = [];
+    this.missions = [];
     this.updaters = [];
     this.particles = [];
     this.finish = null;
@@ -601,6 +604,37 @@ export class World {
     return aabb(x, y, z, 1.7, 2, 1.7);
   }
 
+  // Fahrbares Auto (kind: taxi, police, pizza, sport, monster). ry = Blickrichtung
+  car({ x, z, y, ry = 0, kind = 'taxi', color }) {
+    y ??= this.heightAt(x, z);
+    const c = makeCar(kind, color);
+    c.group.position.set(x, y, z);
+    c.group.rotation.y = ry;
+    this.root.add(c.group);
+    c.home = { pos: new THREE.Vector3(x, y, z), ry };
+    c.heading = ry;
+    c.speed = 0;
+    this.cars.push(c);
+    return c;
+  }
+
+  /**
+   * Auftrag. type: taxi | pizza | race | police. start: [x, z]
+   * stages: [{ at: [x, z], text, person }] (bei police: path: [[x, z], …], speed)
+   * time: Sekunden, reward: Münzen, car: benötigter Autotyp (optional)
+   */
+  mission(def) {
+    const [x, z] = def.start;
+    const y = this.heightAt(x, z);
+    const colors = { taxi: '#ffc531', pizza: '#ff7a1a', race: '#4cc9f0', police: '#7a9cff' };
+    const marker = missionMarker(def.label, colors[def.type] || '#ffc531');
+    marker.position.set(x, y, z);
+    this.root.add(marker);
+    const m = { ...def, start: new THREE.Vector3(x, y, z), marker };
+    this.missions.push(m);
+    return m;
+  }
+
   addRide(ride) {
     this.rides.push(ride);
     // Stern schwebt hoch über der Station – man bekommt ihn nur durch die Fahrt
@@ -652,6 +686,8 @@ export class World {
       s.mesh.position.y = Math.sin(time * 2) * 0.2;
     }
     for (const p of this.portals) p.disc.rotation.z = -time * 1.5;
+    for (const m of this.missions) m.marker.userData.ring.rotation.z = time;
+    for (const c of this.cars) if (c.body.userData.lights) c.body.userData.lights.forEach((l, i) => { l.visible = Math.floor(time * 4 + i) % 2 === 0; });
     for (const g of this.gates) {
       if (g.opening === undefined) continue;
       g.opening += dt;

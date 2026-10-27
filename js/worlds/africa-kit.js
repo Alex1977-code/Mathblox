@@ -5,6 +5,18 @@ import { blockGeometry, studTexture } from '../blocks.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
+// ---------- Mathe-Helfer fürs Gelände ----------
+export const smooth = (t) => t * t * (3 - 2 * t);
+export const clamp01 = (t) => Math.min(1, Math.max(0, t));
+// „Abgerundetes Quadrat“: Abstand zur Mitte, an dem die Insel endet (~57 Land, ~62 Strand)
+export const edgeDist = (x, z) => Math.pow(Math.pow(Math.abs(x) / 60, 4) + Math.pow(Math.abs(z) / 60, 4), 0.25) * 60;
+export const rectDist = (x, z, [x1, z1, x2, z2]) => Math.hypot(Math.max(x1 - x, 0, x - x2), Math.max(z1 - z, 0, z - z2));
+export function segDist(x, z, [ax, az], [bx, bz]) {
+  const dx = bx - ax, dz = bz - az, t = clamp01(((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz));
+  return Math.hypot(x - ax - dx * t, z - az - dz * t);
+}
+export function hash(x, z) { const s = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453; return s - Math.floor(s); }
+
 // Unsichtbarer Kollisionsquader mit Oberkante `top`
 export function collider(w, x, top, z, sx, sy, sz, o = {}) {
   const c = { min: V(x - sx / 2, top - sy, z - sz / 2), max: V(x + sx / 2, top, z + sz / 2), safe: !!o.safe, ice: !!o.ice };
@@ -186,6 +198,16 @@ export function beast(w, kind, o) {
   const a = w.animal(kind, o);
   compact(a.g);
   return a;
+}
+
+// Stufen-Berg aus gedrehten Quadern (fern im Hintergrund). tiers: [[radius, höhe, farbe], …] von unten nach oben
+export function stepMountain(w, cx, cz, tiers, base = -2) {
+  let y = base;
+  for (const [r, h, c] of tiers) {
+    for (const a of [0, Math.PI / 6, Math.PI / 3]) w.box(r * 1.9, h, r * 1.9, c, cx, y + h / 2, cz, a);
+    y += h;
+  }
+  return y;
 }
 
 export function group() { return new THREE.Group(); }

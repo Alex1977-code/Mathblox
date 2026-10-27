@@ -7,7 +7,7 @@ import { pathRide, part } from '../rides.js';
 const G = 1; // Bodenhöhe
 const xc = (z) => 44 + 5 * Math.sin(z * 0.07 + 1); // Flusslauf im Canyon
 const inBay = (x, z) => x > -16 && x < 20 && z < -14;
-const onIsland = (x, z) => Math.hypot(x - 2, z + 32) < 8;
+const onIsland = (x, z) => Math.hypot(x + 7, z + 25) < 7.5;
 const inCanyon = (x, z) => x > 28 && z < 12;
 
 function height(x, z) {
@@ -35,7 +35,7 @@ function color(x, z, h) {
     if (h > G) return BANDS[Math.round(h) % BANDS.length];
     return '#c68752';
   }
-  if (inBay(x, z)) return Math.hypot(x - 2, z + 32) > 6.5 ? '#e6d49a' : '#79c25a';
+  if (inBay(x, z)) return Math.hypot(x + 7, z + 25) > 6.2 ? '#e6d49a' : '#79c25a';
   if (x < -16 && z < -6) return n > 0.5 ? '#9aa0a7' : '#a6abb1';
   if (x > 6 && z > 12) return n > 0.2 ? '#c9bf63' : n < -0.4 ? '#a9b65a' : '#bdb75e';
   if (x < -8 && z > -6) return n > 0.3 ? '#4f9a45' : '#5aa64c';
@@ -271,10 +271,10 @@ export const northamerica = {
     });
 
     // ---------- Freiheitsstatue auf der Insel ----------
-    const SX = 2, SZ = -32, GREEN = '#5fb8a0', GREEN2 = '#4ea08a';
-    S(SX, G, -19.5, 3, 1.2, 11.5, '#a0764e', true); // Steg zur Insel
-    for (let z = -24.5; z <= -14.5; z += 2) w.box(3.1, 0.08, 0.15, '#7a5230', SX, G + 0.02, z);
-    for (let z = -24; z <= -15; z += 3) for (const s of [-1, 1]) w.box(0.3, 2.6, 0.3, '#6b4423', SX + s * 1.6, -0.2, z);
+    const SX = -7, SZ = -25, GREEN = '#5fb8a0', GREEN2 = '#4ea08a';
+    S(SX, G, -16, 3, 1.2, 4.6, '#a0764e', true); // Steg zur Insel
+    for (let z = -17.5; z <= -14.5; z += 1) w.box(3.1, 0.08, 0.15, '#7a5230', SX, G + 0.02, z);
+    for (let z = -17; z <= -15; z += 2) for (const s of [-1, 1]) w.box(0.3, 2.6, 0.3, '#6b4423', SX + s * 1.6, -0.2, z);
     w.enclosure({ x: SX, z: SZ, w: 12, d: 12, side: 's', h: 4.4, y: G, color: '#c9bfae', label: 'Freiheitsstatue', cap: '#b5ab99' });
     // Treppe innen am Sockel
     [[4.5, -27.8], [6.3, -28.6], [6.3, -30.4], [6.3, -32.2], [6.3, -34], [6.3, -35.8]].forEach(([x, z], i) => {
@@ -315,7 +315,7 @@ export const northamerica = {
       S(x, top, z, 1.6, 0.5, 1.6, i % 2 ? '#79c9b2' : '#d8b45a');
       if (i % 5 === 3) w.coin(x, top, z);
     }
-    w.coinLine(SX, -16, SX, -24, 4, G);
+    w.coinLine(SX, -14.5, SX, -17, 2, G);
 
     // ---------- Grand Canyon mit Rafting ----------
     for (let z = 4; z > -58; z -= 5) { // Stromschnellen
@@ -354,7 +354,7 @@ export const northamerica = {
     for (let i = 0; i < 90; i++) {
       const x = w.r(9, 56), z = w.r(14, 56);
       if (inRects(x, z, [[14, 22, 26, 34], [36, 38, 46, 50], [6, 26, 30, 30]])) continue;
-      w.box(0.25, w.r(0.4, 0.8), 0.25, w.pick(['#d8c65e', '#b9b04e', '#e0d27a']), x, G + 0.3, z);
+      w.box(0.5, w.r(0.3, 0.6), 0.12, w.pick(['#a9b84e', '#c4c05a', '#8faa48']), x, G + 0.2, z, w.r(0, 3));
     }
     // Pferdekoppel
     const rail = (x1, z1, x2, z2) => {
@@ -478,7 +478,7 @@ export const northamerica = {
     for (let i = 0; i < 3; i++) A('rabbit', -10 - i * 2, 18 + i * 2, { behavior: 'hop', radius: 4, speed: 2, color: i ? '#c8b49a' : '#9a8a78', hungry: i === 0 });
     A('rabbit', 12, 10, { behavior: 'hop', radius: 3, speed: 2, color: '#d8c8b0', hungry: true });
     for (let i = 0; i < 2; i++) A('duck', -48 + i * 2, 4, { y: G + 0.05, behavior: 'swim', radius: 3, speed: 0.7 });
-    for (const [x, z] of [[-8, -26], [12, -38]]) A('seal', x, z, { y: -0.75, behavior: 'swim', radius: 3, speed: 0.6 });
+    for (const [x, z] of [[8, -26], [10, -38]]) A('seal', x, z, { y: -0.75, behavior: 'swim', radius: 3, speed: 0.6 });
     A('whale', -24, -78, { y: -0.8, behavior: 'jump', radius: 14 });
     if (0) for (let i = 0; i < 4; i++) A('butterfly', w.r(-14, 14), w.r(0, 44), { y: G + 1.2, behavior: 'flutter', radius: 4, color: w.pick(['#ff8a1f', '#ffd23f', '#5fb0ff']) });
 

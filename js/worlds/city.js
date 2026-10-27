@@ -112,7 +112,7 @@ export const city = {
       for (let i = 0; i < n; i++) B(sw / n + 0.01, 0.1, 1.7, i % 2 ? awn : '#ffffff', x - sw / 2 + (i + 0.5) * sw / n, 2.95, zf + 0.8, 0, 0.35);
       B(sw, 0.25, 0.12, awn, x, 2.68, zf + 1.6);
       B(sw - 1, 0.7, 0.14, '#ffffff', x, 3.75, zf + 0.06);
-      w.sign(label, x, 3.8, zf + 0.5, { bg: awn, size: 0.6 });
+      w.sign(label, x, 3.9, zf + 0.5, { bg: awn, size: 0.85 });
     };
     shop(-27, 15, 5.4, 5, '#f2c6a0', '#e8262b', 'Bäckerei');
     shop(-21, 15, 5.4, 6.5, '#cfe3f2', '#2f7df6', 'Spielzeug');
@@ -227,7 +227,7 @@ export const city = {
     for (const z of [-30, -18, 0, 8]) for (const s of [-1, 1]) w.lamp(s * 4.8, z);
     for (const x of [-26, -14, 14, 26]) { w.lamp(x, 20.4); w.lamp(x, -11.6); }
     for (const x of [-20, 16]) w.lamp(x, 27.6);
-    for (const [x, z] of [[-5.2, -2], [5.2, -2], [-5.2, 11], [5.2, 11], [-40.8, -8], [40.8, 28.5]]) w.tree('oak', x, z, 0.75);
+    for (const [x, z] of [[-5.2, -2], [5.2, -2], [-5.2, 11], [5.2, 11], [-41.5, -14], [41.5, -14]]) w.tree('oak', x, z, 0.75);
     const parked = [['#2f7df6', 3, -16, 0], ['#ff595e', 3, -31, Math.PI], ['#ffffff', 10, -11.2, Math.PI / 2], ['#8ac926', 22, -11.2, Math.PI / 2], ['#b07bff', 16, -4.8, -Math.PI / 2], ['#ffd23f', 26, -4.8, -Math.PI / 2]];
     for (const [c, x, z, ry] of parked) carModel(at(B, x, z, ry), c);
 
@@ -237,7 +237,7 @@ export const city = {
     w.updaters.push(loopMovers(roundedLoop([[-34, 22], [34, 22], [34, -38], [-34, -38]], 0.05, 4.5), cars, 8));
 
     // ---------------- Stern 1: Feuertreppe am Hochhaus ----------------
-    w.enclosure({ x: -49, z: -24, w: 16, d: 22, side: 'e', h: 4.4, color: '#c9b49a', label: 'Wolkenkratzer', cap: '#9a8670' });
+    w.enclosure({ x: -49, z: -24, w: 16, d: 22, side: 'e', h: 4.4, color: '#b9a48a', label: 'Wolkenkratzer' });
     const TW = -48; // Ostwand des Hochhauses
     const roofY = 24.5;
     K.solid(-52, roofY, -24, 8, roofY, 16, '#b5523b', { studs: false, safe: true });
@@ -257,8 +257,8 @@ export const city = {
       K.solid(landX, top, z, 2.8, 0.35, 1.5, metal, { studs: false });
       if (!first) railAt(z, top, 1.5);
       const endZ = z === zS ? -19.02 : -28.98;
-      K.solid(landX, top + 1.1, endZ, 2.8, 1.1, 0.06, rail, { hidden: true });
-      B(2.8, 0.08, 0.08, rail, landX, top + 1.05, endZ);
+      if (!first) K.solid(landX, top + 1.1, endZ, 2.8, 1.1, 0.06, rail, { hidden: true });
+      if (!first) B(2.8, 0.08, 0.08, rail, landX, top + 1.05, endZ);
       for (const s of [-1, 1]) B(0.08, 1.1, 0.08, rail, outer, top + 0.55, z + s * 0.7);
     };
     landing(zS, h, true);
@@ -276,24 +276,27 @@ export const city = {
       w.coin(landX, h, north ? zN : zS);
     }
     // Leiter-Kisten zum ersten Absatz (die Leiter ist hochgeklappt)
-    K.solid(-43.8, 1.0, -17.6, 1.8, 1.0, 1.8, '#c49a6c', { safe: true });
-    K.solid(-43.8, 2.0, -19.75, 1.8, 2.0, 1.8, '#a0764e', { safe: true });
-    B(0.1, 3, 0.6, rail, outer - 0.1, 4.6, zS, 0, 0, 0);
+    K.solid(-43.6, 1.0, -16.4, 1.8, 1.0, 1.8, '#c49a6c', { safe: true });
+    K.solid(-46.6, 2.0, -17.6, 1.8, 2.0, 1.8, '#a0764e', { safe: true });
+    for (const s of [-1, 1]) B(0.1, 3.4, 0.1, rail, outer, 4.9, zS + s * 0.6);
+    for (let y = 3.6; y < 6.5; y += 0.5) B(0.08, 0.08, 1.2, rail, outer, y, zS);
     // Dach: Brüstung, Klimagerät, Aussichtsdeck mit Stern, Wassertank
-    for (const [x, z, sx, sz] of [[-52, -31.95, 8, 0.1], [-52, -16.05, 8, 0.1], [-55.95, -24, 0.1, 16], [-48.05, -25.25, 0.1, 13.5]]) {
+    for (const [x, z, sx, sz] of [[-52, -31.95, 8, 0.1], [-52, -16.05, 8, 0.1], [-55.95, -24, 0.1, 16], [-48.05, -26.3, 0.1, 11.4], [-48.05, -17.45, 0.1, 2.9]]) {
       K.solid(x, roofY + 1.1, z, sx, 1.1, sz, '#9c4230', { studs: false });
     }
-    K.solid(-51, roofY + 1, -21.5, 2, 1, 2, '#b7bec6', { safe: true });
-    K.solid(-52.5, roofY + 2, -25.5, 3, 0.4, 3, '#6b4423', { safe: true });
-    for (const [dx, dz] of [[-1.3, -1.3], [1.3, -1.3], [-1.3, 1.3], [1.3, 1.3]]) B(0.25, 1.6, 0.25, '#6b4423', -52.5 + dx, roofY + 0.8, -25.5 + dz);
-    w.star('skyscraper', -52.5, roofY + 2, -25.5, 'Wolkenkratzer');
+    const deck = roofY + 3;
+    K.solid(-51, roofY + 1.2, -21.5, 2, 1.2, 2, '#b7bec6', { safe: true });
+    B(1.6, 0.1, 1.6, '#5a616b', -51, roofY + 1.25, -21.5);
+    K.solid(-52.5, deck, -25.5, 3, 0.4, 3, '#6b4423', { safe: true });
+    for (const [dx, dz] of [[-1.3, -1.3], [1.3, -1.3], [-1.3, 1.3], [1.3, 1.3]]) B(0.25, 2.6, 0.25, '#6b4423', -52.5 + dx, roofY + 1.3, -25.5 + dz);
+    w.star('skyscraper', -52.5, deck, -25.5, 'Wolkenkratzer');
     for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) B(0.25, 3, 0.25, '#6b4423', -53.5 + dx, roofY + 1.5, -29.5 + dz);
     w.cyl(1.5, 1.5, 3, '#8a5e33', -53.5, roofY + 3, -29.5, { seg: 10 });
     w.cone(1.7, 1.2, '#5b3a1e', -53.5, roofY + 6, -29.5, { seg: 10 });
     B(0.2, 6, 0.2, '#c8ccd2', -50, roofY + 3, -30);
     glow(0.4, 0.4, 0.4, '#ff3b30', -50, roofY + 6, -30);
     w.sign('Feuertreppe', -44.2, 6.8, -16.4, { bg: '#b5523b', size: 0.8 });
-    w.coin(-43.8, 2.0, -19.75);
+    w.coin(-46.6, 2.0, -17.6);
 
     // ---------------- Stern 2: Baustelle mit Kran ----------------
     w.enclosure({ x: 18, z: -24, w: 26, d: 22, side: 'w', h: 4.4, color: '#f2efe6', label: 'Baustelle', cap: '#ff8a1f' });
@@ -430,7 +433,7 @@ export const city = {
     const rotor = boxList();
     rotorModel(rotor);
     const rotorMesh = meshOf(rotor);
-    rotorMesh.position.set(0, 3.95, -1.2);
+    rotorMesh.position.set(0, 3.95, -1.45);
     heli.add(rotorMesh);
     const tail = boxList();
     tail(0.06, 1.6, 0.25, '#2b2f36', 0, 0, 0);

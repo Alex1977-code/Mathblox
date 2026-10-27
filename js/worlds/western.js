@@ -13,6 +13,44 @@ function noise(x, z) {
   return a + (b - a) * v;
 }
 
+// Fasst die einfarbigen Klötzchen jeder Gruppe zu einem Mesh zusammen (weniger Draw-Calls).
+// Untergruppen (bewegte Gelenke) bleiben erhalten und werden einzeln zusammengefasst.
+function bake(root) {
+  root.updateMatrixWorld(true);
+  const groups = [];
+  root.traverse((o) => { if (!o.isMesh && !o.isSprite) groups.push(o); });
+  const m = new THREE.Matrix4(), inv = new THREE.Matrix4(), nm = new THREE.Matrix3(), v = new THREE.Vector3();
+  for (const grp of groups) {
+    const meshes = grp.children.filter((c) => c.isMesh && c.material?.isMeshLambertMaterial && !c.material.map && !c.material.transparent && c.material.emissive.getHex() === 0);
+    if (meshes.length < 2) continue;
+    inv.copy(grp.matrixWorld).invert();
+    const pos = [], nor = [], col = [];
+    for (const mesh of meshes) {
+      m.multiplyMatrices(inv, mesh.matrixWorld);
+      nm.getNormalMatrix(m);
+      const g = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry;
+      const P = g.attributes.position, N = g.attributes.normal, c = mesh.material.color;
+      for (let i = 0; i < P.count; i++) {
+        v.fromBufferAttribute(P, i).applyMatrix4(m); pos.push(v.x, v.y, v.z);
+        v.fromBufferAttribute(N, i).applyMatrix3(nm).normalize(); nor.push(v.x, v.y, v.z);
+        col.push(c.r, c.g, c.b);
+      }
+      if (g !== mesh.geometry) g.dispose();
+      grp.remove(mesh);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    geo.computeBoundingSphere();
+    const out = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
+    out.castShadow = true;
+    out.receiveShadow = true;
+    grp.add(out);
+  }
+  return root;
+}
+
 const OVAL = { cx: 0, cz: -6, rx: 34, rz: 30 };   // Eisenbahn-Rundkurs
 const MESA = { x: -40, z: -40 };                  // Tafelberg (Kletterei)
 const MINE = { x: 45, z: -46 };                   // Minenberg
@@ -178,7 +216,7 @@ export const western = {
       pv.position.set(sx + 0.12, G + 1.45, 13 + sd * 0.62);
       part(pv, 0.08, 1.0, 0.56, '#d9a35a', 0, 0, -sd * 0.29);
       part(pv, 0.1, 0.12, 0.6, '#7a3f22', 0, 0.5, -sd * 0.29);
-      w.add(pv);
+      w.add(bake(pv));
       doors.push([pv, sd]);
     }
     w.updaters.push((dt, t) => { for (const [pv, sd] of doors) pv.rotation.y = sd * Math.max(0, Math.sin(t * 1.3)) * 0.9; });
@@ -283,6 +321,7 @@ export const western = {
     part(loco, 2.2, 1.0, 2.4, '#5b3a1e', 0, 1.2, -4.6);
     part(loco, 1.8, 0.5, 2.0, '#2b2b2b', 0, 1.9, -4.6);
     for (const s of [-1, 1]) for (const z of [-3.9, -5.3]) part(loco, 0.18, 0.8, 0.8, '#c8322b', s * 1.0, 0.4, z);
+    bake(loco);
     // Rauchwölkchen (Weltkoordinaten)
     const puffs = [], puffMat = new THREE.MeshLambertMaterial({ color: '#f2f2f2', transparent: true, opacity: 0.85 });
     const puffGeo = new THREE.BoxGeometry(1, 1, 1);
@@ -411,7 +450,7 @@ export const western = {
     rotor.position.set(WX, G + 9.6, WZ + 0.6);
     for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; part(rotor, 0.5, 1.9, 0.05, i % 2 ? '#e8262b' : '#f4eee0', Math.sin(a) * 1.5, Math.cos(a) * 1.5, 0).rotation.z = -a; }
     part(rotor, 0.5, 0.5, 0.4, '#3b3b3b', 0, 0, 0);
-    w.add(rotor);
+    w.add(bake(rotor));
     w.box(0.15, 0.6, 2.6, '#8a8f98', WX, G + 9.6, WZ - 1.2);
     w.box(0.08, 1.4, 1.6, '#e8262b', WX, G + 9.8, WZ - 2.6);
     w.updaters.push((dt) => { rotor.rotation.z -= dt * 1.8; });
@@ -424,7 +463,7 @@ export const western = {
     for (const [x1, z1, x2, z2, sp] of [[-30, -54, 30, -54, 3], [26, -22, 26, 18, 2.4], [8, 28, 27, 28, 2], [-28, 12, -28, -20, 2.6]]) {
       const g = new THREE.Group();
       for (let k = 0; k < 3; k++) part(g, 1.1, 1.1, 1.1, k % 2 ? '#b8955a' : '#a07a45', 0, 0, 0).rotation.set(k * 0.7, k * 1.1, k * 0.4);
-      w.add(g);
+      w.add(bake(g));
       weeds.push({ g, x1, z1, x2, z2, sp, len: Math.hypot(x2 - x1, z2 - z1) });
     }
     w.updaters.push((dt, t) => {
@@ -480,5 +519,6 @@ export const western = {
     w.coinLine(-26, -2, -26, -14, 4, G);
     w.coinLine(26, 4, 26, 16, 4, G);
     for (const c of w.coins) c.mesh.castShadow = false;
+    for (const a of w.animals) bake(a.g);
   },
 };
