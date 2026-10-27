@@ -2,40 +2,61 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { blockMat, studTexture } from './blocks.js';
 import { coaster, dropTower, pirateShip, carousel, ferrisWheel, boatTour } from './rides.js';
+import { city } from './worlds/city.js';
+import { halloween } from './worlds/halloween.js';
+import { tenerife } from './worlds/tenerife.js';
+import { western } from './worlds/western.js';
+import { knights } from './worlds/knights.js';
+import { mars } from './worlds/mars.js';
+import { africa } from './worlds/africa.js';
+import { asia } from './worlds/asia.js';
+import { europe } from './worlds/europe.js';
+import { northamerica } from './worlds/northamerica.js';
+import { southamerica } from './worlds/southamerica.js';
+import { australia } from './worlds/australia.js';
+import { antarctica } from './worlds/antarctica.js';
 
-const inRects = (x, z, rects) => rects.some(([x1, z1, x2, z2]) => x >= x1 && x <= x2 && z >= z1 && z <= z2);
+import { exitPortal, scatterTrees, inRects } from './worlds/common.js';
 
-// Bäume zufällig verteilen, aber nicht in freizuhaltenden Bereichen
-function scatterTrees(w, kinds, n, half, avoid, s = [0.9, 1.3]) {
-  let placed = 0, tries = 0;
-  while (placed < n && tries++ < n * 30) {
-    const x = w.r(-half, half), z = w.r(-half, half);
-    if (inRects(x, z, avoid)) continue;
-    w.tree(w.pick(kinds), x, z, w.r(s[0], s[1]));
-    placed++;
-  }
-}
-
-function exitPortal(w, z = 53) {
-  w.portal({ x: 0, z, facing: 'n', label: 'Zur Mathe-Insel', color: '#2f7df6', target: 'hub' });
-  w.spawn.set(0, 0, z - 16);
-  w.spawnYaw = 0;
-}
+// Reihenfolge der Portale auf der Mathe-Insel und am Flughafen
+export const HUB_PORTALS = [
+  ['tropical', 'Papageien-Paradies', '#2fbf4a'],
+  ['castle', 'Märchenschloss', '#ff5fb0'],
+  ['coaster', 'Achterbahn-Park', '#ef3e3e'],
+  ['city', 'Großstadt', '#e0a800'],
+  ['halloween', 'Halloween', '#ff7a1a'],
+  ['tenerife', 'Teneriffa', '#1fb5c9'],
+  ['western', 'Wilder Westen', '#c0763b'],
+  ['knights', 'Ritterburg', '#7a7f8a'],
+  ['mars', 'Mars', '#d2532c'],
+  ['worldtour', 'Weltreise', '#2f5fd6'],
+  ['parkour', 'Wolken-Parkour', '#3aa6ff'],
+];
+export const CONTINENTS = [
+  ['africa', 'Afrika', '#e0a030'],
+  ['asia', 'Asien', '#e8262b'],
+  ['europe', 'Europa', '#2f5fd6'],
+  ['northamerica', 'Nordamerika', '#1d7a6a'],
+  ['southamerica', 'Südamerika', '#2fbf4a'],
+  ['australia', 'Australien', '#d2532c'],
+  ['antarctica', 'Antarktis', '#5fb0e8'],
+];
 
 // ---------------------------------------------------------------------------
 export const WORLDS = {
   hub: {
     id: 'hub',
     name: 'Mathe-Insel',
+    isHub: true,
     seed: 11,
     theme: { sky: ['#1f7fe0', '#7cc4ff', '#d9f0ff'], fog: '#bfe3ff', sea: '#2f8fd8' },
+    stars: {},
     build(w, ctx) {
-      w.island(100, '#6cc24a', '#f1d38b');
-      w.spawn.set(0, 0, 26);
+      w.island(120, '#6cc24a', '#f1d38b');
+      w.spawn.set(0, 0, 18);
       w.spawnYaw = 0;
       // Platz mit Brunnen
-      w.box(26, 0.08, 26, '#ddd6c6', 0, 0.04, 0);
-      for (const [x1, z1, x2, z2] of [[0, 13, 0, 46], [-13, 0, -27, 0], [13, 0, 27, 0], [-10, -13, -10, -27], [10, -13, 10, -27]]) w.path(x1, z1, x2, z2, 3.2, '#ddd6c6');
+      w.cyl(16, 16, 0.08, '#ddd6c6', 0, 0, 0, { seg: 40, shadow: false });
       for (const [x, z, ww, dd] of [[0, -3.4, 7.6, 0.8], [0, 3.4, 7.6, 0.8], [-3.4, 0, 0.8, 6], [3.4, 0, 0.8, 6]]) w.block(x, 0.6, z, ww, 0.6, dd, '#b9c3cf');
       w.water(0, 0, 6, 6, { top: 0.45, color: '#5cc8ff' });
       w.block(0, 2.4, 0, 1, 2.4, 1, '#b9c3cf');
@@ -44,32 +65,97 @@ export const WORLDS = {
       jet.position.set(0, 3.8, 0);
       w.add(jet);
       w.updaters.push((dt, t) => { jet.scale.y = 1 + Math.sin(t * 4) * 0.15; });
-      w.coinRing(0, 0, 0, 8, 12);
+      w.coinRing(0, 0, 0, 9, 14);
 
+      // Portal-Ring: jedes Portal schaut zur Mitte
       const stars = ctx.worldStars || {};
-      const sub = (id) => `★ ${(stars[id] || []).length} / 4`;
-      w.portal({ x: -30, z: 0, facing: 'e', label: 'Papageien-Paradies', color: '#2fbf4a', target: 'tropical', sub: sub('tropical') });
-      w.portal({ x: 30, z: 0, facing: 'w', label: 'Märchenschloss', color: '#ff5fb0', target: 'castle', sub: sub('castle') });
-      w.portal({ x: 10, z: -30, facing: 's', label: 'Achterbahn-Park', color: '#ef3e3e', target: 'coaster', sub: sub('coaster') });
-      w.portal({ x: -10, z: -30, facing: 's', label: 'Wolken-Parkour', color: '#3aa6ff', target: 'parkour', sub: `Level ${ctx.level || 1}` });
-      w.sign('Löse die Aufgabe am Portal!', 0, 4.2, 18, { bg: '#ffffff', fg: '#17233b', size: 1 });
-      for (const [x, z] of [[-6, 16], [6, 16], [-16, 6], [16, 6], [-16, -6], [16, -6]]) w.lamp(x, z);
+      const R = 40, n = HUB_PORTALS.length;
+      const portalPos = [];
+      HUB_PORTALS.forEach(([id, label, color], i) => {
+        const th = Math.PI + (i / n) * Math.PI * 2;
+        const x = Math.sin(th) * R, z = Math.cos(th) * R;
+        portalPos.push([x, z]);
+        w.path(Math.sin(th) * 15, Math.cos(th) * 15, Math.sin(th) * (R - 2), Math.cos(th) * (R - 2), 3.2, '#ddd6c6');
+        const max = Object.keys(WORLDS[id]?.stars || {}).length;
+        const sub = id === 'parkour' ? `Level ${ctx.level || 1}` : id === 'worldtour' ? '7 Kontinente' : `★ ${(stars[id] || []).length} / ${max}`;
+        w.portal({ x, z, angle: th + Math.PI, label, color, target: id, sub });
+        w.lamp(Math.sin(th + 0.12) * 20, Math.cos(th + 0.12) * 20);
+      });
+      w.sign('Löse die Aufgabe am Portal!', 0, 4.2, 11, { bg: '#ffffff', fg: '#17233b', size: 1 });
 
-      // Teich mit Enten
-      w.water(-20, 22, 10, 7, { color: '#4fb8f0' });
-      for (let i = 0; i < 3; i++) w.animal('duck', { pos: new THREE.Vector3(-20 + i, 0.05, 22), behavior: 'swim', radius: 3, speed: 0.8, hungry: i === 0 });
-      w.animal('swan', { pos: new THREE.Vector3(-18, 0.05, 23), behavior: 'swim', radius: 2.5, speed: 0.5 });
-      for (let i = 0; i < 4; i++) w.animal('rabbit', { pos: new THREE.Vector3(18 + i * 2, 0, 20 - i * 2), behavior: 'hop', radius: 6, speed: 2.2, color: i % 2 ? '#c8b49a' : '#e8e2d8', hungry: i < 2 });
-      for (let i = 0; i < 6; i++) w.animal('butterfly', { pos: new THREE.Vector3(w.r(-30, 30), 1.2, w.r(-20, 30)), behavior: 'flutter', radius: 4, color: w.pick(['#ff8a1f', '#5fb0ff', '#ffd23f', '#ff5fb0']), y: 1.2 });
-      w.flowers(-20, 30, 14, 8, 50, ['#ff595e', '#ffd23f', '#ffffff', '#b07bff']);
-      w.flowers(22, -16, 14, 10, 40, ['#ff5fb0', '#ffffff', '#ffd23f']);
-      scatterTrees(w, ['oak', 'birch', 'blossom'], 45, 47, [[-16, -16, 16, 16], [-3, 12, 3, 48], [-36, -6, -12, 6], [12, -6, 36, 6], [-16, -36, 16, -10], [-26, 17, -14, 27]]);
-      w.coinLine(-14, 0, -24, 0, 4);
-      w.coinLine(14, 0, 24, 0, 4);
-      w.coinLine(0, 14, 0, 22, 3);
+      // Teich mit Enten, Hasen, Schmetterlinge
+      w.water(-24, 22, 10, 7, { color: '#4fb8f0' });
+      for (let i = 0; i < 3; i++) w.animal('duck', { pos: new THREE.Vector3(-24 + i, 0.05, 22), behavior: 'swim', radius: 3, speed: 0.8, hungry: i === 0 });
+      w.animal('swan', { pos: new THREE.Vector3(-22, 0.05, 23), behavior: 'swim', radius: 2.5, speed: 0.5 });
+      for (let i = 0; i < 4; i++) w.animal('rabbit', { pos: new THREE.Vector3(22 + i * 2, 0, 20 - i * 2), behavior: 'hop', radius: 6, speed: 2.2, color: i % 2 ? '#c8b49a' : '#e8e2d8', hungry: i < 2 });
+      w.animal('cat', { pos: new THREE.Vector3(8, 0, -14), radius: 4, speed: 1, color: '#f08a1f', hungry: true });
+      for (let i = 0; i < 6; i++) w.animal('butterfly', { pos: new THREE.Vector3(w.r(-30, 30), 1.2, w.r(-30, 30)), behavior: 'flutter', radius: 4, color: w.pick(['#ff8a1f', '#5fb0ff', '#ffd23f', '#ff5fb0']), y: 1.2 });
+      w.flowers(-24, 30, 14, 6, 40, ['#ff595e', '#ffd23f', '#ffffff', '#b07bff']);
+      w.flowers(24, -24, 12, 10, 40, ['#ff5fb0', '#ffffff', '#ffd23f']);
+      for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 + 0.3; w.bushes(Math.sin(a) * 26, Math.cos(a) * 26, 4, 4, 3); }
+      // Bäume außerhalb des Platzes und nicht auf Wegen/vor Portalen
+      let placed = 0;
+      for (let k = 0; k < 900 && placed < 45; k++) {
+        const x = w.r(-56, 56), z = w.r(-56, 56), r = Math.hypot(x, z);
+        if (r < 47) continue;
+        if (portalPos.some(([px, pz]) => Math.hypot(px - x, pz - z) < 10)) continue;
+        const ang = Math.atan2(x, z);
+        if (HUB_PORTALS.some((_, i) => Math.abs(Math.atan2(Math.sin(ang - (Math.PI + (i / n) * Math.PI * 2)), Math.cos(ang - (Math.PI + (i / n) * Math.PI * 2)))) * r < 3.5)) continue;
+        if (Math.hypot(x + 24, z - 22) < 8) continue;
+        w.tree(w.pick(['oak', 'birch', 'blossom']), x, z, w.r(0.9, 1.3));
+        placed++;
+      }
     },
   },
 
+  worldtour: {
+    id: 'worldtour',
+    name: 'Weltreise-Flughafen',
+    isHub: true,
+    seed: 77,
+    theme: { sky: ['#2a6fd4', '#8fd0ff', '#eaf6ff'], fog: '#cfe8ff', sea: '#2f8fd8' },
+    stars: {},
+    build(w, ctx) {
+      w.island(116, '#78c060', '#efe0b5');
+      exitPortal(w, 53, 'hub');
+      // Start- und Landebahn mit Markierungen
+      w.box(110, 0.06, 10, '#3d4450', 0, 0.03, -44);
+      for (let x = -50; x <= 50; x += 8) w.box(4, 0.07, 0.5, '#ffffff', x, 0.04, -44);
+      // Terminal
+      w.block(-36, 7, 38, 26, 7, 8, '#dfe6ee', { plain: true });
+      for (let x = -47; x <= -25; x += 3) w.box(2.2, 4.5, 0.1, '#7cc4ff', x, 3.5, 33.95);
+      w.sign('Weltreise', -36, 9.2, 33, { bg: '#2f5fd6', size: 1.4 });
+      w.block(-18, 14, 42, 3, 14, 3, '#dfe6ee', { plain: true });
+      w.box(5, 2.5, 5, '#7cc4ff', -18, 15.2, 42);
+      w.sign('Wähle einen Kontinent!', 0, 4, 26, { bg: '#ffffff', fg: '#17233b', size: 1 });
+      // Flugzeuge als Deko
+      const plane = (x, z, ry, c) => {
+        w.box(2, 2, 14, '#ffffff', x, 2.5, z, ry);
+        w.box(16, 0.3, 3, '#ffffff', x, 2.3, z, ry);
+        const fx = Math.sin(ry), fz = Math.cos(ry);
+        w.box(0.3, 3, 2.4, c, x - fx * 6.2, 4.4, z - fz * 6.2, ry);
+        w.box(6, 0.25, 1.8, '#ffffff', x - fx * 6, 3, z - fz * 6, ry);
+        w.box(2.05, 0.4, 14, c, x, 2.9, z, ry);
+      };
+      plane(-30, -44, Math.PI / 2, '#e8262b');
+      plane(40, 36, 0.3, '#2f7df6');
+      plane(-46, 14, -0.4, '#2fbf4a');
+      // Kontinent-Portale im Bogen
+      const stars = ctx.worldStars || {};
+      CONTINENTS.forEach(([id, label, color], i) => {
+        const th = Math.PI + (-0.5 + i / (CONTINENTS.length - 1)) * Math.PI * 0.9;
+        const x = Math.sin(th) * 30, z = Math.cos(th) * 30 + 14;
+        const max = Object.keys(WORLDS[id]?.stars || {}).length;
+        w.portal({ x, z, angle: th + Math.PI, label, color, target: id, sub: `★ ${(stars[id] || []).length} / ${max}` });
+        w.path(x * 0.6, (z - 14) * 0.6 + 14, x, z, 3, '#ddd6c6');
+      });
+      w.path(0, 14, 0, 45, 4, '#ddd6c6');
+      for (let i = 0; i < 4; i++) w.animal('bird', { pos: new THREE.Vector3(0, 0, 0), y: 14 + i * 3, behavior: 'fly', radius: 20 + i * 6, speed: 6, colors: ['#ffffff', '#cfd6de', '#9aa5b1'] });
+      scatterTrees(w, ['oak', 'birch'], 25, 52, [[-56, -52, 56, -36], [-52, 28, -10, 48], [-40, -24, 40, 30], [-6, 26, 6, 58], [30, 26, 50, 46], [-54, 6, -38, 22]]);
+    },
+  },
+
+  // -------------------------------------------------------------------------
   // -------------------------------------------------------------------------
   tropical: {
     id: 'tropical',
@@ -383,4 +469,7 @@ export const WORLDS = {
   },
 };
 
-export const THEME_WORLDS = ['tropical', 'castle', 'coaster'];
+Object.assign(WORLDS, { city, halloween, tenerife, western, knights, mars, africa, asia, europe, northamerica, southamerica, australia, antarctica });
+
+// Welten mit Sternen (ohne die beiden Inseln)
+export const THEME_WORLDS = Object.keys(WORLDS).filter((id) => !WORLDS[id].isHub);

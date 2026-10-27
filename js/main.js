@@ -60,7 +60,8 @@ scene.background = skyTex;
 scene.fog = new THREE.Fog('#bfe3ff', 70, 170);
 
 const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 500);
-scene.add(new THREE.HemisphereLight('#ffffff', '#6d8fb0', 1.6));
+const hemi = new THREE.HemisphereLight('#ffffff', '#6d8fb0', 1.6);
+scene.add(hemi);
 const sun = new THREE.DirectionalLight('#fff4e0', 2.2);
 sun.castShadow = true;
 sun.shadow.mapSize.set(1024, 1024);
@@ -88,6 +89,12 @@ function setTheme(t) {
   scene.fog.far = t.fogFar ?? 230;
   sea.material.color.set(t.sea);
   sea.position.y = t.seaY ?? -0.8;
+  const L = t.light || {};
+  hemi.intensity = L.hemi ?? 1.6;
+  hemi.color.set(L.sky || '#ffffff');
+  hemi.groundColor.set(L.ground || '#6d8fb0');
+  sun.intensity = L.sun ?? 2.2;
+  sun.color.set(L.sunColor || '#fff4e0');
 }
 
 const avatar = new Avatar(save.outfit);
@@ -190,7 +197,24 @@ function moveAxis(axis, d, wasGrounded) {
     else if (d < 0) p[axis] = s.max[axis] + R + 1e-3;
     player.vel[axis] = 0;
   }
+  if (stage.terr) {
+    const h = terrainTop();
+    if (axis === 'y') {
+      if (p.y < h) { p.y = h; player.vel.y = Math.max(0, player.vel.y); if (d <= 0) landed = TERRAIN; }
+    } else if (h > p.y + 1e-3) {
+      // Gelände: Stufen bis TERRAIN_STEP hochlaufen, höhere Kanten blockieren
+      if (h - p.y <= (wasGrounded ? TERRAIN_STEP : 0.35)) p.y = h;
+      else { p[axis] -= d; player.vel[axis] = 0; }
+    }
+  }
   return landed;
+}
+
+const TERRAIN = { safe: true, terrain: true };
+const TERRAIN_STEP = 1.05;
+function terrainTop() {
+  const p = player.pos, r = R - 0.05;
+  return Math.max(stage.heightAt(p.x - r, p.z - r), stage.heightAt(p.x + r, p.z - r), stage.heightAt(p.x - r, p.z + r), stage.heightAt(p.x + r, p.z + r));
 }
 
 // Bewegte Plattformen schieben den Spieler aus sich heraus
@@ -257,14 +281,14 @@ function stepPlayer(dt) {
   player.jumpBuffer -= dt;
   player.coyote = player.grounded ? 0.12 : player.coyote - dt;
   if (player.jumpBuffer > 0 && player.coyote > 0) {
-    player.vel.y = JUMP;
+    player.vel.y = stage.jump ?? JUMP;
     player.jumpBuffer = 0;
     player.coyote = 0;
     player.grounded = false;
     player.ground = null;
     sfx.jump();
   }
-  player.vel.y = Math.max(player.vel.y - GRAVITY * dt, -45);
+  player.vel.y = Math.max(player.vel.y - (stage.gravity ?? GRAVITY) * dt, -45);
 
   const wasGrounded = player.grounded;
   const fallSpeed = player.vel.y;
@@ -322,8 +346,10 @@ function checkWorld() {
     if (!s.got && s.pos.distanceToSquared(center) < 2.6) collectStar(s);
   }
   for (const pt of stage.portals) {
-    if (!inZone(pt, pt.trigger)) continue;
-    if (pt.target === 'hub') return travel('hub');
+    const hit = stage.portalHit(pt, p);
+    if (pt.cooldown && !hit) pt.cooldown = false;
+    if (!hit || pt.cooldown) continue;
+    if (pt.free) return travel(pt.target);
     return openTask({ type: 'portal', portal: pt });
   }
   for (const r of stage.rides) {
@@ -407,6 +433,8 @@ function loadWorld(id) {
   const def = WORLDS[id];
   setTheme(def.theme);
   stage = new World(scene, def, save.worldStars[id] || [], { worldStars: save.worldStars, level: save.level });
+  stage.gravity = def.gravity;
+  stage.jump = def.jump;
   player.checkpoint.copy(stage.spawn);
   respawn();
   player.facing = stage.spawnYaw + Math.PI;
@@ -423,14 +451,14 @@ function travel(target) {
   if (target === 'parkour') { startParkour(save.level); return; }
   loadWorld(target);
   // Zurück auf der Insel: vor dem Portal der Welt herauskommen, aus der man kommt
-  if (target === 'hub' && from) {
+  if (WORLDS[target].isHub && from) {
     const pt = stage.portals.find((p) => p.target === from || (from === 'parkour' && p.target === 'parkour'));
     if (pt) {
       pt.cooldown = true;
       player.pos.copy(pt.front);
       player.checkpoint.copy(pt.front);
-      cam.yaw = { s: Math.PI, n: 0, e: -Math.PI / 2, w: Math.PI / 2 }[pt.facing];
-      player.facing = cam.yaw + Math.PI;
+      cam.yaw = pt.angle + Math.PI;
+      player.facing = pt.angle;
     }
   }
   updateCamera(0, true);
@@ -447,13 +475,14 @@ function addCoins(n) {
 }
 
 function totalStars() { return THEME_WORLDS.reduce((s, id) => s + (save.worldStars[id] || []).length, 0); }
+const MAX_STARS = THEME_WORLDS.reduce((s, id) => s + Object.keys(WORLDS[id].stars || {}).length, 0);
 
 function updateHud() {
   $('hud-coins').textContent = save.coins;
   const gates = $('hud-gates');
   if (stage.isWorld) {
     $('hud-level').textContent = stage.name;
-    if (stage.id === 'hub') gates.innerHTML = `<i class="open wide">★ ${totalStars()} / ${THEME_WORLDS.length * 4}</i>`;
+    if (stage.def.isHub) gates.innerHTML = `<i class="open wide">★ ${totalStars()} / ${MAX_STARS}</i>`;
     else gates.innerHTML = Object.keys(stage.def.stars).map((id) => `<i class="${stage.collected.has(id) ? 'open' : ''}">★</i>`).join('');
   } else {
     $('hud-level').textContent = `Level ${stage.number} · Klasse ${save.grade}`;
@@ -542,7 +571,7 @@ function renderMenu() {
   $('grade-topic').textContent = GRADES[save.grade - 1].topics;
   for (const b of $('diff-seg').children) b.setAttribute('aria-checked', String(Number(b.dataset.v) === save.difficulty));
   for (const b of $('mode-seg').children) b.setAttribute('aria-checked', String(b.dataset.v === save.mode));
-  $('play-level').textContent = `★ ${totalStars()} / ${THEME_WORLDS.length * 4}`;
+  $('play-level').textContent = `★ ${totalStars()} / ${MAX_STARS}`;
   $('menu-coins').textContent = save.coins;
   const { solved, correct } = save.stats;
   $('menu-stats').textContent = solved ? `${solved} Aufgaben · ${Math.round((correct / solved) * 100)} % richtig` : 'Noch keine Aufgaben gelöst';
@@ -962,9 +991,9 @@ function showWorldDone() {
   $('done-title').textContent = `${stage.name} geschafft!`;
   $('done-stars').innerHTML = '<span class="on">★</span><span class="on">★</span><span class="on">★</span>';
   $('done-stats').innerHTML = `
-    <dt>Sterne</dt><dd>4 von 4</dd>
+    <dt>Sterne</dt><dd>${stage.collected.size} von ${Object.keys(stage.def.stars).length}</dd>
     <dt>Welt-Bonus</dt><dd>+100</dd>
-    <dt>Alle Welten</dt><dd>★ ${totalStars()} / ${THEME_WORLDS.length * 4}</dd>`;
+    <dt>Alle Welten</dt><dd>★ ${totalStars()} / ${MAX_STARS}</dd>`;
   $('btn-next').textContent = 'Weiter erkunden';
   $('btn-done-menu').textContent = 'Zur Mathe-Insel';
   show('done');
