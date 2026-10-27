@@ -1036,6 +1036,7 @@ function frame(now) {
   time += dt;
   if (stage) {
     if (state === 'ride') rideT += dt;
+    stage.focus = camera.position;
     if (state !== 'pause') stage.update(dt, time, ride, rideT);
     if (state === 'play') {
       stepPlayer(dt);
@@ -1101,7 +1102,7 @@ if ('serviceWorker' in navigator && window.isSecureContext && !location.hostname
 // Test-Zugriff für automatisierte Prüfungen (nur mit ?debug in der Adresse)
 if (new URLSearchParams(location.search).has('debug')) {
   window.__mathblox = {
-    player, input, save,
+    player, input, save, cam, camera,
     get stage() { return stage; }, get level() { return stage; }, get state() { return state; }, get ride() { return ride; }, get task() { return task; },
     get drawCalls() { return renderer.info.render.calls; },
     startGame: startParkour, startParkour, startAdventure, travel, loadWorld, levelComplete, openTask, startRide,

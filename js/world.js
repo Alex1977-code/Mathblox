@@ -623,10 +623,18 @@ export class World {
         this.updateBounds(s);
       }
     }
+    // Weit entfernte Tiere und Münzen ausblenden (spart Draw-Calls in großen Welten)
+    const f = this.focus, far2 = (this.viewDist || 110) ** 2;
     for (const a of this.animals) {
+      if (f) {
+        const vis = a.g.position.distanceToSquared(f) < far2;
+        if (!vis) { if (a.g.visible && a.behavior !== 'jump') a.g.visible = false; continue; }
+        if (a.behavior !== 'jump') a.g.visible = true;
+      }
       if (this.terr && a.onGround) a.y = this.heightAt(a.g.position.x, a.g.position.z);
       updateAnimal(a, dt, time);
     }
+    if (f) for (const c of this.coins) if (!c.taken) c.mesh.visible = c.mesh.position.distanceToSquared(f) < far2;
     for (const c of this.coins) {
       if (c.taken) {
         if (c.mesh.visible) {
