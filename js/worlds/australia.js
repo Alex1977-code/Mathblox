@@ -174,12 +174,13 @@ export const australia = {
     const climbZ = BZ + 3.4;
     const xAt = (y) => AX - AL * Math.sqrt(Math.max(0, 1 - (y - 0.8) / AH)); // Obergurt erreicht Höhe y
     const summit = archY(AX) + 1.7;
-    let px = xAt(DECK), n = 0;
-    for (let top = DECK + 0.9; top < summit + 0.3 - 0.5 && px < AX - 2.5; top += 0.9) {
-      const x1 = Math.min(AX - 1.6, Math.max(px + 0.9, xAt(top)));
+    let px = xAt(DECK), prev = DECK, n = 0;
+    while (px < AX - 1.7) { // Stufen: höchstens 0,9 hoch, mindestens 0,7 breit, nie über dem Bogen
+      const x1 = Math.min(AX - 1.6, Math.max(px + 0.7, xAt(prev + 0.9)));
+      const top = Math.min(prev + 0.9, archY(x1) + 1.6);
       S((px + x1) / 2, top, climbZ, x1 - px, 1.5, 1.6, n % 2 ? '#9aa4ae' : '#b9c2cc');
       if (n % 4 === 2) w.coin((px + x1) / 2, top, climbZ);
-      px = x1; n++;
+      px = x1; prev = top; n++;
     }
     S(AX, summit + 0.3, climbZ, 3.2, 0.6, 2, '#ffd23f', true);
     for (const [dx, c] of [[-0.8, '#2f5fd6'], [0.8, '#d2532c']]) { w.box(0.1, 3, 0.1, '#ffffff', AX + dx, summit + 1.8, climbZ - 0.8); w.box(1.2, 0.7, 0.05, c, AX + dx + 0.6, summit + 2.9, climbZ - 0.8); }

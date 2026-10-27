@@ -6,8 +6,8 @@ import { pathRide, part } from '../rides.js';
 
 const G = 1; // Bodenhöhe
 const xc = (z) => 44 + 5 * Math.sin(z * 0.07 + 1); // Flusslauf im Canyon
-const inBay = (x, z) => x > -16 && x < 20 && z < -14;
-const onIsland = (x, z) => Math.hypot(x + 7, z + 25) < 7.5;
+const inBay = (x, z) => x > -22 && x < 20 && z < -14;
+const onIsland = (x, z) => Math.hypot(x + 12, z + 25) < 7.5;
 const inCanyon = (x, z) => x > 28 && z < 12;
 
 function height(x, z) {
@@ -35,7 +35,7 @@ function color(x, z, h) {
     if (h > G) return BANDS[Math.round(h) % BANDS.length];
     return '#c68752';
   }
-  if (inBay(x, z)) return Math.hypot(x + 7, z + 25) > 6.2 ? '#e6d49a' : '#79c25a';
+  if (inBay(x, z)) return Math.hypot(x + 12, z + 25) > 6.2 ? '#e6d49a' : '#79c25a';
   if (x < -16 && z < -6) return n > 0.5 ? '#9aa0a7' : '#a6abb1';
   if (x > 6 && z > 12) return n > 0.2 ? '#c9bf63' : n < -0.4 ? '#a9b65a' : '#bdb75e';
   if (x < -8 && z > -6) return n > 0.3 ? '#4f9a45' : '#5aa64c';
@@ -101,14 +101,14 @@ export const northamerica = {
     path(0, 22, -24, 22, 3, '#c9b48a');
     path(0, 28, 26, 28, 3, '#d9cdb4');
     path(0, -8, -18, -8, 3, '#bfc3c8');
-    w.box(36, 0.08, 3.4, '#cfc7b8', 2, G + 0.04, -12.3); // Hafenpromenade
-    w.box(3.4, 0.08, 40, '#cfc7b8', -17.7, G + 0.04, -34);
+    w.box(42, 0.08, 3.4, '#cfc7b8', -1, G + 0.04, -12.3); // Hafenpromenade
+    w.box(3.4, 0.08, 40, '#cfc7b8', -23.7, G + 0.04, -34);
     // Geländer am Hafenbecken (fest, mit Lücke für den Steg)
-    S(-7.25, G + 1, -14.2, 17.5, 1, 0.25, '#e8e8e8');
-    S(11.75, G + 1, -14.2, 16.5, 1, 0.25, '#e8e8e8');
-    S(-16.2, G + 1, -36, 0.25, 1, 44, '#e8e8e8');
+    S(-17.75, G + 1, -14.2, 8.5, 1, 0.25, '#e8e8e8');
+    S(4.75, G + 1, -14.2, 30.5, 1, 0.25, '#e8e8e8');
+    S(-22.2, G + 1, -36, 0.25, 1, 44, '#e8e8e8');
     S(20.2, G + 1, -36, 0.25, 1, 44, '#e8e8e8');
-    for (let x = -15; x <= 19; x += 2.5) if (Math.abs(x - 2) > 2) w.box(0.3, 1.2, 0.3, '#5a6270', x, G + 0.6, -14.2);
+    for (let x = -21; x <= 19; x += 2.5) if (Math.abs(x + 12) > 2) w.box(0.3, 1.2, 0.3, '#5a6270', x, G + 0.6, -14.2);
     w.sign('Nordamerika', -6, 6.2, 30, { bg: '#1d7a6a', size: 1.4 });
     w.sign('Willkommen!', -6, 4.8, 30, { bg: '#ffffff', fg: '#17233b', size: 0.9 });
     w.box(0.3, 4.4, 0.3, '#5b3a1e', -9, G + 2.2, 30);
@@ -138,7 +138,7 @@ export const northamerica = {
         w.box(x1 === x2 ? 0.15 : 1.2, 0.08, x1 === x2 ? 1.2 : 0.15, '#f2f2f2', x1 + (x2 - x1) * t, G + 0.05, z1 + (z2 - z1) * t);
       }
     };
-    street(-46, -50, -46, -12); street(-34, -50, -34, -12); street(-58, -38, -20, -38); street(-58, -26, -20, -26); street(-58, -12, -18, -12);
+    street(-46, -50, -46, -12); street(-34, -50, -34, -12); street(-58, -38, -23, -38); street(-58, -26, -23, -26); street(-58, -12, -18, -12);
     const tower = (x, z, wd, dd, h, wall, win = '#bfe3ff') => w.house(x, z, wd, dd, h, { wall, window: win, roof: 'flat', roofColor: '#6b7480', door: 's', y: G });
     tower(-52, -44, 7, 7, 16, '#b5654a', '#ffe9b0');
     tower(-28, -42, 7, 6, 20, '#7fa8c9');
@@ -193,28 +193,28 @@ export const northamerica = {
         car.rotation.y = Math.atan2(b[0] - a[0], b[1] - a[1]);
       });
     };
-    taxiLoop([[-45, -37], [-21, -37], [-21, -25], [-45, -25]], 0, 6);
-    taxiLoop([[-45, -37], [-21, -37], [-21, -25], [-45, -25]], 36, 6);
+    taxiLoop([[-45, -37], [-23.3, -37], [-23.3, -25], [-45, -25]], 0, 6);
+    taxiLoop([[-45, -37], [-23.3, -37], [-23.3, -25], [-45, -25]], 36, 6);
     taxiLoop([[-35, -25], [-35, -13], [-57, -13], [-57, -25]], 10, 5);
 
     // ---------- Hängebrücke über die Hafeneinfahrt ----------
     const RED = '#c8402c', RED2 = '#a8321f', BZ = -50, DECK = 4.5;
-    S(2, DECK, BZ, 46, 0.8, 4.4, null, true); // Fahrbahn x -21 … 25
-    w.box(46, 0.1, 4.4, '#4a4f57', 2, DECK - 0.04, BZ);
-    for (let x = -20; x <= 24; x += 3) w.box(1.4, 0.11, 0.15, '#ffd23f', x, DECK - 0.02, BZ);
+    S(0, DECK, BZ, 50, 0.8, 4.4, null, true); // Fahrbahn x -25 … 25
+    w.box(50, 0.1, 4.4, '#4a4f57', 0, DECK - 0.04, BZ);
+    for (let x = -24; x <= 24; x += 3) w.box(1.4, 0.11, 0.15, '#ffd23f', x, DECK - 0.02, BZ);
     for (const s of [-1, 1]) {
-      w.box(46, 1.3, 0.3, RED, 2, DECK - 1.2, BZ + s * 2.1);
-      for (let x = -20; x <= 24; x += 2) w.box(0.18, 1.3, 0.18, RED2, x, DECK - 1.2, BZ + s * 2.1, 0, 0, 0.6 * (x % 4 ? 1 : -1));
+      w.box(50, 1.3, 0.3, RED, 0, DECK - 1.2, BZ + s * 2.1);
+      for (let x = -24; x <= 24; x += 2) w.box(0.18, 1.3, 0.18, RED2, x, DECK - 1.2, BZ + s * 2.1, 0, 0, 0.6 * (x % 4 ? 1 : -1));
     }
     // Geländer mit Lücken (Treppe Ost, Pfeiler-Aufstieg)
-    S(2, DECK + 1, BZ - 2.1, 46, 1, 0.2, '#e0e0e0');
-    S(-4.5, DECK + 1, BZ + 2.1, 33, 1, 0.2, '#e0e0e0');
+    S(0, DECK + 1, BZ - 2.1, 50, 1, 0.2, '#e0e0e0');
+    S(-6.5, DECK + 1, BZ + 2.1, 37, 1, 0.2, '#e0e0e0');
     S(19, DECK + 1, BZ + 2.1, 6, 1, 0.2, '#e0e0e0');
     S(25, DECK + 1, BZ, 0.2, 1, 4.4, '#e0e0e0');
     // Treppe West (Richtung Stadt) und Ost (nach Süden)
     for (let k = 0; k < 6; k++) {
       const top = DECK - 0.5 * (k + 1);
-      S(-21.65 - 1.3 * k, top, BZ, 1.3, top - G + 0.5, 4.4, k % 2 ? '#b9b2a6' : '#c9c2b6', true);
+      S(-25.65 - 1.3 * k, top, BZ, 1.3, top - G + 0.5, 4.4, k % 2 ? '#b9b2a6' : '#c9c2b6', true);
       S(23.5, top, BZ + 2.85 + 1.3 * k, 3, top - G + 0.5, 1.3, k % 2 ? '#b9b2a6' : '#c9c2b6', true);
     }
     // Pfeiler (Türme)
@@ -232,18 +232,18 @@ export const northamerica = {
     // Tragseile mit Hängern
     for (const s of [-1, 1]) {
       const cz = BZ + s * 3.2;
-      const cy = (x) => (x < -7.5 ? 2.5 + (towerTop + 0.8 - 2.5) * (x + 24) / 16.5
+      const cy = (x) => (x < -7.5 ? 2.5 + (towerTop + 0.8 - 2.5) * (x + 28) / 20.5
         : x > 11.5 ? 2.5 + (towerTop + 0.8 - 2.5) * (27 - x) / 15.5
           : 6.2 + (towerTop + 0.8 - 6.2) * ((x - 2) / 9.5) ** 2);
       let prev = null;
-      for (let x = -24; x <= 27.01; x += 1.5) {
+      for (let x = -28; x <= 27.01; x += 1.5) {
         const p = [x, cy(x), cz];
         if (prev) beam(prev, p, 0.35, RED);
         prev = p;
-        if (x > -21 && x < 25 && Math.abs(x + 7.5) > 1 && Math.abs(x - 11.5) > 4) w.box(0.08, cy(x) - DECK, 0.08, RED2, x, (cy(x) + DECK) / 2, cz - s * 0.9);
+        if (x > -25 && x < 25 && Math.abs(x + 7.5) > 1 && Math.abs(x - 11.5) > 4) w.box(0.08, cy(x) - DECK, 0.08, RED2, x, (cy(x) + DECK) / 2, cz - s * 0.9);
       }
     }
-    for (const x of [-24, 27]) w.box(3, 3, 8, '#b9b2a6', x, 2.5, BZ);
+    for (const x of [-28, 27]) w.box(3, 3, 8, '#b9b2a6', x, 2.5, BZ);
     // Pfeiler-Aufstieg: Plattformen rund um den Ostpfeiler
     const climb = [[14.4, -45.4], [11.5, -44], [8.6, -45.4], [8.6, -48.2], [8.6, -51], [8.6, -53.8], [10, -56.4], [13, -56.4],
       [14.4, -53.8], [14.4, -51], [14.4, -48.2], [14.4, -45.4], [11.5, -44], [8.6, -45.4], [8.6, -48.2], [8.6, -51]];
@@ -253,7 +253,7 @@ export const northamerica = {
       if (i % 4 === 2) w.coin(x, top, z);
     });
     w.sign('Pfeiler-Aufstieg', 15, DECK + 3.4, BZ + 2.4, { bg: RED, size: 0.75 });
-    w.sign('Hängebrücke', -26, 8, BZ + 3, { bg: RED, size: 1 });
+    w.sign('Hängebrücke', -30, 8, BZ + 3, { bg: RED, size: 1 });
     w.coinLine(-18, BZ, 22, BZ, 8, DECK);
     // Schlepper fährt unter der Brücke hin und her
     const tug = new THREE.Group();
@@ -271,7 +271,7 @@ export const northamerica = {
     });
 
     // ---------- Freiheitsstatue auf der Insel ----------
-    const SX = -7, SZ = -25, GREEN = '#5fb8a0', GREEN2 = '#4ea08a';
+    const SX = -12, SZ = -25, GREEN = '#5fb8a0', GREEN2 = '#4ea08a';
     S(SX, G, -16, 3, 1.2, 4.6, '#a0764e', true); // Steg zur Insel
     for (let z = -17.5; z <= -14.5; z += 1) w.box(3.1, 0.08, 0.15, '#7a5230', SX, G + 0.02, z);
     for (let z = -17; z <= -15; z += 2) for (const s of [-1, 1]) w.box(0.3, 2.6, 0.3, '#6b4423', SX + s * 1.6, -0.2, z);
@@ -487,6 +487,6 @@ export const northamerica = {
     w.coinLine(4, 28, 24, 28, 5, G);
     w.coinRing(33, G, 40, 9, 8);
     w.coinLine(-4, 22, -22, 22, 5, G);
-    w.coinLine(-20, -8, -20, -46, 6, G);
+    w.coinLine(-24, -8, -24, -44, 6, G);
   },
 };

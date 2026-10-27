@@ -44,7 +44,7 @@ export const africa = {
   name: 'Afrika',
   seed: 201,
   theme: {
-    sky: ['#3a86d8', '#9fd0f5', '#ffe2b0'], fog: '#f2d9a8', sea: '#2f8fc9', fogNear: 120, fogFar: 380,
+    sky: ['#3a86d8', '#9fd0f5', '#ffe2b0'], fog: '#f2d9a8', sea: '#2f8fc9', fogNear: 80, fogFar: 300,
     light: { hemi: 1.55, sun: 2.4, sunColor: '#fff0d0', sky: '#ffffff', ground: '#b08a50' },
   },
   stars: { safari: 'Safari-Tour', pyramid: 'Pyramide', baobab: 'Baumhaus' },

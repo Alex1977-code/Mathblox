@@ -635,6 +635,33 @@ export class World {
     return m;
   }
 
+  // Kleine Objekte (Schilder, Häuser-Teile, Fahrzeuge …) weit weg nicht zeichnen. Über Layer statt
+  // .visible, damit die Spiel-Logik (offene Tore, eingesammelte Sterne) unberührt bleibt.
+  cullFar(f) {
+    if (!this.cull) {
+      this.cull = [];
+      const box = new THREE.Box3(), sph = new THREE.Sphere();
+      this.root.updateMatrixWorld(true);
+      for (const o of this.root.children) {
+        if (o.isInstancedMesh || o === this.terrainMesh) continue;
+        box.setFromObject(o);
+        if (box.isEmpty()) continue;
+        box.getBoundingSphere(sph);
+        if (sph.radius > 20) continue;
+        const parts = [];
+        o.traverse((c) => { if (c.isMesh || c.isSprite) parts.push(c); });
+        this.cull.push({ o, local: o.worldToLocal(sph.center.clone()), parts, shown: true });
+      }
+    }
+    const d2 = (this.cullDist || 170) ** 2, v = new THREE.Vector3();
+    for (const c of this.cull) {
+      const show = c.o.localToWorld(v.copy(c.local)).distanceToSquared(f) < d2;
+      if (show === c.shown) continue;
+      c.shown = show;
+      for (const m of c.parts) { if (show) m.layers.enable(0); else m.layers.disable(0); }
+    }
+  }
+
   addRide(ride) {
     this.rides.push(ride);
     // Stern schwebt hoch über der Station – man bekommt ihn nur durch die Fahrt
@@ -669,6 +696,7 @@ export class World {
       updateAnimal(a, dt, time);
     }
     if (f) for (const c of this.coins) if (!c.taken) c.mesh.visible = c.mesh.position.distanceToSquared(f) < far2;
+    if (f) this.cullFar(f);
     for (const c of this.coins) {
       if (c.taken) {
         if (c.mesh.visible) {

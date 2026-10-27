@@ -149,7 +149,6 @@ export const europe = {
     const a2 = a1 + 0.6 + 8 * 0.5;
     spiral(3.0, 11, 0.75, a2 + 0.5, G + 20);
     w.star('eiffel', EX, G + 32, EZ, 'Eiffelturm');
-    w.eiffelStairs = stairs;
     w.sign('Eiffelturm', EX, G + 4.5, EZ + 10.5, { bg: '#2f5fd6', size: 0.9 });
 
     // ---------- Cafés am Platz ----------
@@ -268,7 +267,6 @@ export const europe = {
     SB.add(AX, G + 8, AZ, 5, 8, 5, '#f2ece0', { safe: true });
     for (const [cx, cz] of C) w.box(0.4, 1.2, 0.4, '#ffd23f', AX + cx * 2.3, G + 8.6, AZ + cz * 2.3);
     w.star('colosseum', AX, G + 8, AZ, 'Arena');
-    w.arenaCols = cols;
     for (const [dx, c] of [[-3, '#e8262b'], [3, '#2f5fd6']]) { w.box(0.15, 4, 0.15, '#666666', AX + dx, G + 10.6, AZ - AR); w.box(1.6, 1, 0.05, c, AX + dx + 0.85, G + 12, AZ - AR); }
 
     // ---------- Windmühlen mit Tulpenfeldern ----------

@@ -143,7 +143,6 @@ export const antarctica = {
     SB.add(4.5, 4.2, -55.5, 2.6, 1.2, 2.6, '#dff3ff', { ice: true });
     SB.add(2, 5.4, -56.5, 3, 2.4, 3, '#ffffff', { safe: true });
     icePts.push([3, 3.0, -52], [4.5, 4.2, -55.5], [2, 5.4, -56.5]);
-    w.icePts = icePts;
     for (const [dx, dz, sx, sy, sz, c] of [[-2, -3, 3, 5, 3, '#eef8ff'], [4, -6, 4, 7, 3, '#f8fcff'], [6.5, -1.5, 2, 4, 2.5, '#cfeaff']]) w.box(sx, sy, sz, c, 3 + dx, 1 + sy / 2, -56.5 + dz, 0.3);
     w.box(8, 1, 7, '#a8d8f0', 3, -0.6, -54);
     w.star('iceberg', 2, 5.4, -56.5, 'Eisberg-Parkour');
@@ -242,7 +241,6 @@ export const antarctica = {
     const mTop = G + 5.2 + 1.1 * 11;
     SB.add(MX, mTop, MZ, 3, 0.4, 3, '#ffd23f', { safe: true });
     mastPts.push([MX + 0.8, mTop, MZ + 0.8]);
-    w.mastPts = mastPts;
     collider(w, MX, mTop - 0.4, MZ, 1, mTop - 0.4 - G, 1);
     for (const [dx, dz] of [[-0.45, -0.45], [0.45, -0.45], [-0.45, 0.45], [0.45, 0.45]]) w.box(0.14, mTop + 8 - G, 0.14, '#d8dde4', MX + dx, (G + mTop + 8) / 2, MZ + dz);
     for (let y = G + 1; y < mTop + 8; y += 1.4) { w.box(1.0, 0.08, 0.08, '#e8262b', MX, y, MZ - 0.45, 0, 0, 0.6); w.box(0.08, 0.08, 1.0, '#e8262b', MX + 0.45, y, MZ, 0.6); }
@@ -286,7 +284,8 @@ export const antarctica = {
     A('penguin', KX + 6, KZ + 4, { radius: 3, speed: 0.5, scale: 0.6, hungry: true });
     A('penguin', KX - 1, KZ - 5, { radius: 3, speed: 0.6, scale: 0.6 });
     A('penguin', -6, 30, { radius: 3, speed: 0.6, scale: 1.3, hungry: true });
-    A('seal', 3, -52, { pos: V(4.5, 3.0, -51.5), y: 3.0, radius: 0.8, speed: 0.3, hungry: true });
+    A('seal', 3, -52, { pos: V(5.2, 3.0, -51.2), y: 3.0, radius: 0.4, speed: 0.2 });
+    A('seal', 16, -26, { radius: 1.5, speed: 0.3, hungry: true });
     A('seal', 30, -36, { radius: 2, speed: 0.3, hungry: true });
     A('seal', 34, -32, { radius: 2, speed: 0.3 });
     A('seal', 4.5, -36, { pos: V(4.5, 1.2, -35.8), y: 1.2, radius: 0.5, speed: 0.2 });

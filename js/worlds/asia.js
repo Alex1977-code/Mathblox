@@ -221,7 +221,6 @@ export const asia = {
       solidBox(w, sx0, top, z, 3, top - H(sx0, z) + 1, 1.5, '#a39a8a');
     }
     w.sign('Chinesische Mauer', sx0, H(sx0, sz0 + 6) + 4, sz0 + 6, { bg: '#8f2a2a', size: 0.8 });
-    w.wallPts = wallPts;
 
     // ---------- Stern 2: Pagode im Hof ----------
     const PX = 34, PZ = -32, PY = H(PX, PZ);

@@ -1,10 +1,13 @@
-// Teneriffa: offene Insel nach echten Koordinaten. 1 Einheit = 200 m in der Fläche, 100 m in der Höhe.
+// Teneriffa: offene Insel nach echten Koordinaten. 1 Einheit ≈ 133 m in der Fläche, 100 m in der Höhe.
 // Norden = −z, Osten = +x. Teide, Las Cañadas, Anaga, Teno, Masca, Orte, Straßen und das Wolkenmeer im Norden.
 import * as THREE from '../../vendor/three.module.min.js';
 import { pathRide, part } from '../rides.js';
 import { studTexture } from '../blocks.js';
+import { makeAnimal } from '../animals.js';
 
-const LON0 = -16.52, LAT0 = 28.29, KX = 490, KZ = 555;
+// S: Vergrößerung gegenüber dem ursprünglichen Maßstab (200 m pro Einheit); alle Gelände-Breiten skalieren mit
+const S = 1.5;
+const LON0 = -16.52, LAT0 = 28.29, KX = 490 * S, KZ = 555 * S;
 const geo = (lon, lat) => [(lon - LON0) * KX, -(lat - LAT0) * KZ];
 
 // Küstenlinie im Uhrzeigersinn ab Punta de Teno
@@ -71,6 +74,19 @@ const P = {
   candelaria: geo(-16.371, 28.354), guimar: geo(-16.413, 28.321), adeje: geo(-16.726, 28.122),
 };
 
+// Weitere Orte und Sehenswürdigkeiten
+Object.assign(P, {
+  tacoronte: geo(-16.410, 28.477), santaUrsula: geo(-16.490, 28.425), realejos: geo(-16.585, 28.383), rambla: geo(-16.652, 28.390),
+  bajamar: geo(-16.345, 28.550), hidalgo: geo(-16.328, 28.571), sanAndres: geo(-16.196, 28.503), tegueste: geo(-16.338, 28.518),
+  cruzCarmen: geo(-16.280, 28.532), benijo: geo(-16.183, 28.565), izana: geo(-16.511, 28.300), humboldt: geo(-16.488, 28.398),
+  fasnia: geo(-16.440, 28.236), poris: geo(-16.436, 28.160), arico: geo(-16.482, 28.180), sanIsidro: geo(-16.553, 28.096),
+  abrigos: geo(-16.592, 28.042), galletas: geo(-16.660, 28.016), arona: geo(-16.680, 28.100), waterpark: geo(-16.712, 28.090),
+  monkeys: geo(-16.695, 28.078), caleta: geo(-16.755, 28.100), callao: geo(-16.769, 28.127), barranco: geo(-16.712, 28.134),
+  guia: geo(-16.775, 28.210), alcala: geo(-16.822, 28.207), arena: geo(-16.826, 28.228), tamaimo: geo(-16.820, 28.265),
+  tanque: geo(-16.788, 28.364), camel: geo(-16.775, 28.352), lunar: geo(-16.618, 28.168), castillo: geo(-16.7655, 28.3738),
+  tram: geo(-16.252, 28.468), casaBalcones: geo(-16.5215, 28.3915),
+});
+
 // Bergstation La Rambleta: 7 Einheiten unterhalb des Gipfels in Richtung Talstation
 P.cableTop = (() => { const dx = P.cableBase[0] - P.teide[0], dz = P.cableBase[1] - P.teide[1], l = Math.hypot(dx, dz); return [P.teide[0] + dx / l * 7, P.teide[1] + dz / l * 7]; })();
 
@@ -85,60 +101,78 @@ const ROADS = [
   [P.santaCruz, P.laguna, geo(-16.41, 28.47), geo(-16.49, 28.43), P.puerto, geo(-16.62, 28.388), P.icod, P.garachico, P.buenavista],
   [P.orotava, geo(-16.50, 28.35), geo(-16.53, 28.32), P.portillo, P.cableBase, P.parador, P.tauce, geo(-16.66, 28.18), P.vilaflor, P.granadilla, P.airport],
   [P.adeje, geo(-16.80, 28.20), P.gigantes, P.santiago, P.masca, P.buenavista],
+  [P.laguna, P.cruzCarmen, P.taganana],                                           // TF-12 durch Anaga
+  [P.laguna, geo(-16.40, 28.43), geo(-16.46, 28.36), P.izana, P.portillo],        // TF-24 über die Cumbre Dorsal
+  [P.laguna, P.tegueste, P.bajamar, P.hidalgo],
+  [P.americas, P.caleta, P.callao, geo(-16.80, 28.20)],
+  [P.icod, P.tanque, P.santiago],
+  [P.sanIsidro, P.granadilla, P.arico, P.fasnia, geo(-16.39, 28.30)],
 ];
+// Straßenbahn Santa Cruz – La Laguna (neben der Straße)
+const TRAM = [P.tram, geo(-16.275, 28.468), geo(-16.300, 28.478), [P.laguna[0] + 7, P.laguna[1] + 4]];
 
 // Ebene Flächen für Orte, Stationen, Parks (x, z, Radius in Einheiten)
 const PADS = [
   [...P.teide, 3.2, 1.5], [...P.airport, 11, 45], [...P.cableBase, 4], [...P.cableTop, 2.5, 2], [...P.parador, 4],
   [...P.icod, 8], [...P.guimar, 9], [...P.tenoFaro, 6], [...P.mascaBeach, 4, 3], [...P.gigantes, 5], [...P.masca, 4, 3],
   [...P.loro, 7], [...P.santaCruz, 7], [...P.laguna, 6], [...P.candelaria, 4], [...P.medano, 4], [...P.tfn, 9],
+  [...P.waterpark, 11], [...P.izana, 7], [...P.camel, 9, 10], [...P.lunar, 6], [...P.monkeys, 5], [...P.castillo, 4, 3],
+  [...P.hidalgo, 3, 4], [...P.humboldt, 3, 5], [...P.sanIsidro, 6],
 ];
+
+// Sperrflächen für Häuser (x, z, Radius): Parks, Tore, Bahnhöfe
+const KEEP = [
+  [...P.airport, 32], [...P.icod, 11], [...P.guimar, 12], [...P.loro, 10], [...P.auditorio, 6], [...P.candelaria, 7], [...P.cableBase, 7],
+  [...P.waterpark, 14], [...P.izana, 10], [...P.camel, 12], [...P.lunar, 9], [...P.monkeys, 7], [...P.castillo, 6], [...P.gigantes, 5],
+  [...P.hidalgo, 4], [...P.humboldt, 4], [...P.parador, 6], [...P.casaBalcones, 5],
+];
+const onRoad = (x, z, m) => ROADS.some((r) => lineDist(x, z, r) < m) || lineDist(x, z, TRAM) < m;
 
 function baseHeight(x, z) {
   const inIsland = insideCoast(x, z);
   // Roque de Garachico (kleine Felsinsel) und Montaña Roja ragen aus dem Meer/Strand
   const [rgx, rgz] = geo(-16.762, 28.381);
-  const islet = Math.max(0, 90 - Math.hypot(x - rgx, z - rgz) * 70);
+  const islet = Math.max(0, 90 - Math.hypot(x - rgx, z - rgz) * 70 / S);
   if (!inIsland) return islet > 0 ? islet : -100;
-  const d = coastDist(x, z), dk = d / 5;
+  const d = coastDist(x, z), dk = d / (5 * S);
   // Flach an der Küste, steiler im Inneren (Flughafen Süd ~60 m, Vilaflor ~1400 m)
   let h = 2050 * (1 - Math.exp(-((dk / 8) ** 2)));
   // Cumbre Dorsal: Rücken vom Teide nach La Laguna
   const dd = lineDist(x, z, DORSAL);
   const tDors = Math.max(0, Math.min(1, (x - DORSAL[0][0]) / (DORSAL[2][0] - DORSAL[0][0])));
-  h = Math.max(h, (2050 - tDors * 1100) * Math.exp(-((dd / 16) ** 2)) * Math.min(1, dk / 2));
+  h = Math.max(h, (2050 - tDors * 1100) * Math.exp(-((dd / (16 * S)) ** 2)) * Math.min(1, dk / 2));
   // Anaga und Teno: zerklüftete Gebirge
   const da = lineDist(x, z, ANAGA);
-  const anaga = 950 * Math.exp(-((da / 9) ** 2)) * Math.min(1, dk / 0.7);
+  const anaga = 950 * Math.exp(-((da / (9 * S)) ** 2)) * Math.min(1, dk / 0.7);
   const [tx, tz] = geo(-16.84, 28.33);
-  const teno = 1050 * Math.exp(-((Math.hypot(x - tx, z - tz) / 22) ** 2)) * Math.min(1, dk / 0.35);
+  const teno = 1050 * Math.exp(-((Math.hypot(x - tx, z - tz) / (22 * S)) ** 2)) * Math.min(1, dk / 0.35);
   h = Math.max(h, anaga, teno);
-  const rugged = Math.exp(-((da / 14) ** 2)) + Math.exp(-((Math.hypot(x - tx, z - tz) / 26) ** 2));
+  const rugged = Math.exp(-((da / (14 * S)) ** 2)) + Math.exp(-((Math.hypot(x - tx, z - tz) / (26 * S)) ** 2));
   // Orotava-Tal und Masca-Schlucht
-  h -= 500 * Math.exp(-((lineDist(x, z, OROTAVA) / 14) ** 2)) * smooth(0.5, 3, dk);
-  h -= 650 * Math.exp(-((lineDist(x, z, MASCA_GORGE) / 2.2) ** 2));
+  h -= 500 * Math.exp(-((lineDist(x, z, OROTAVA) / (14 * S)) ** 2)) * smooth(0.5, 3, dk);
+  h -= 650 * Math.exp(-((lineDist(x, z, MASCA_GORGE) / (2.2 * S)) ** 2));
   // Las Cañadas: Caldera mit flachem Boden und Steilwand (Lücken bei Boca de Tauce und El Portillo)
-  const ex = (x - P.caldera[0]) / 40, ez = (z - P.caldera[1]) / 27;
+  const ex = (x - P.caldera[0]) / (40 * S), ez = (z - P.caldera[1]) / (27 * S);
   const e = Math.hypot(ex, ez);
   const ang = Math.atan2(ez, ex);
-  if (e < 1) h = 2150 + noise(x / 9, z / 9) * 25;
-  const gap = Math.max(Math.exp(-(((x - P.tauce[0]) ** 2 + (z - P.tauce[1]) ** 2) / 60)), Math.exp(-(((x - P.portillo[0]) ** 2 + (z - P.portillo[1]) ** 2) / 120)));
+  if (e < 1) h = 2150 + noise(x / (9 * S), z / (9 * S)) * 25;
+  const gap = Math.max(Math.exp(-(((x - P.tauce[0]) ** 2 + (z - P.tauce[1]) ** 2) / (60 * S * S))), Math.exp(-(((x - P.portillo[0]) ** 2 + (z - P.portillo[1]) ** 2) / (120 * S * S))));
   if (ang > -0.6 && e > 0.88 && e < 1.25) h = Math.max(h, 2150 + 420 * Math.exp(-(((e - 1.02) / 0.07) ** 2)) * (1 - gap));
   // Teide und Pico Viejo
   const rt = Math.hypot(x - P.teide[0], z - P.teide[1]);
-  if (rt < 17.5) h = Math.max(h, 3718 - 1520 * (rt / 17.5) ** 0.9);
+  if (rt < 17.5 * S) h = Math.max(h, 3718 - 1520 * (rt / (17.5 * S)) ** 0.9);
   const rp = Math.hypot(x - P.pico[0], z - P.pico[1]);
-  if (rp < 12) h = Math.max(h, 3135 - 950 * (rp / 12));
-  if (rp < 2.2) h -= 120; // Krater des Pico Viejo
+  if (rp < 12 * S) h = Math.max(h, 3135 - 950 * (rp / (12 * S)));
+  if (rp < 2.2 * S) h -= 120; // Krater des Pico Viejo
   // Montaña Roja
   const rr = Math.hypot(x - P.roja[0], z - P.roja[1]);
-  if (rr < 4) h = Math.max(h, 171 * (1 - rr / 4) + 20);
+  if (rr < 4 * S) h = Math.max(h, 171 * (1 - rr / (4 * S)) + 20);
   // Rauschen (weniger auf Straßen, mehr in Anaga/Teno)
   const road = Math.min(...ROADS.map((r) => lineDist(x, z, r)));
-  const amp = (e < 1 || rt < 17.5 ? 15 : 45 + 160 * Math.min(1, rugged)) * smooth(1.2, 5, road);
-  h += (noise(x / 7, z / 7) * 0.7 + noise(x / 2.6, z / 2.6) * 0.3) * amp;
+  const amp = (e < 1 || rt < 17.5 * S ? 15 : 45 + 160 * Math.min(1, rugged)) * smooth(1.2, 5, road);
+  h += (noise(x / (7 * S), z / (7 * S)) * 0.7 + noise(x / (2.6 * S), z / (2.6 * S)) * 0.3) * amp;
   // Küste: Strände flach, Klippen bei Los Gigantes/Teno
-  const cliff = Math.hypot(x - P.gigantes[0], z - P.gigantes[1]) < 18 || Math.hypot(x - tx, z - tz) < 26;
+  const cliff = Math.hypot(x - P.gigantes[0], z - P.gigantes[1]) < 18 * S || Math.hypot(x - tx, z - tz) < 26 * S;
   h *= cliff ? Math.min(1, dk / 0.1) : smooth(0, 0.5, dk) * 0.85 + 0.15 * Math.min(1, dk / 0.1);
   return Math.max(h, 8 + islet);
 }
@@ -163,9 +197,9 @@ function northness(x, z) {
   if (x > DORSAL[0][0]) {
     const t = (x - DORSAL[0][0]) / (DORSAL[2][0] - DORSAL[0][0]);
     const lineZ = DORSAL[0][1] + (DORSAL[2][1] - DORSAL[0][1]) * Math.min(1.4, t);
-    return (lineZ - z) / 12;
+    return (lineZ - z) / (12 * S);
   }
-  return (P.teide[1] + 4 - z) / 12;
+  return (P.teide[1] + 4 * S - z) / (12 * S);
 }
 
 function colorAt(x, z, h) {
@@ -174,15 +208,15 @@ function colorAt(x, z, h) {
   const c = new THREE.Color();
   const n = northness(x, z);
   const rt = Math.hypot(x - P.teide[0], z - P.teide[1]), rp = Math.hypot(x - P.pico[0], z - P.pico[1]);
-  const ex = (x - P.caldera[0]) / 40, ez = (z - P.caldera[1]) / 27;
-  if (m < 70) c.set(n > 0 || x < -120 ? '#3d3a38' : '#e6cd8c');                       // schwarzer/goldener Sand
-  else if (Math.hypot(x - P.roja[0], z - P.roja[1]) < 4) c.set('#b5532c');            // Montaña Roja
-  else if (rt < 17 && m > 2300) c.set(m > 3450 ? '#d8cbb3' : (noise(x / 2, z / 2) > 0.2 ? '#4a3f3a' : '#7a5040')); // Teide
-  else if (rp < 12 && m > 2300) c.set('#5a4a44');
+  const ex = (x - P.caldera[0]) / (40 * S), ez = (z - P.caldera[1]) / (27 * S);
+  if (m < 70) c.set(n > 0 || x < -120 * S ? '#3d3a38' : '#e6cd8c');                       // schwarzer/goldener Sand
+  else if (Math.hypot(x - P.roja[0], z - P.roja[1]) < 4 * S) c.set('#b5532c');            // Montaña Roja
+  else if (rt < 17 * S && m > 2300) c.set(m > 3450 ? '#d8cbb3' : (noise(x / 2, z / 2) > 0.2 ? '#4a3f3a' : '#7a5040')); // Teide
+  else if (rp < 12 * S && m > 2300) c.set('#5a4a44');
   else if (Math.hypot(ex, ez) < 1) c.set(noise(x / 6, z / 6) > 0.25 ? '#4a4442' : '#cdb488');          // Caldera: Lava und Bimsstein
   else if (m > 2200) c.set('#a08c6a');
   else if (m > 1050) c.set(n > -0.3 ? '#3d7a3a' : '#4a8040');                         // Kanarenkiefern-Gürtel
-  else if (lineDist(x, z, ANAGA) < 14) c.set('#2f6a3a');                              // Lorbeerwald Anaga
+  else if (lineDist(x, z, ANAGA) < 14 * S) c.set('#2f6a3a');                              // Lorbeerwald Anaga
   else if (n > 0) c.set(m < 500 ? '#6aa84a' : '#56963f');                             // grüner Norden
   else c.set(m < 400 ? '#c9a46a' : '#b39062');                                        // trockener Süden
   return c.offsetHSL(0, 0, v).getHex();
@@ -218,19 +252,27 @@ function lightHouse(w, x, z, wd, dp, h, o = {}) {
 }
 
 function town(w, cx, cz, r, n, o = {}) {
-  const placed = [];
-  for (let k = 0; k < n * 8 && placed.length < n; k++) {
+  n = Math.round(n * 1.4);
+  r = Math.max(r * 1.5, 4.2 * Math.sqrt(n)); // Platz für alle Häuser
+  const placed = [], all = (w.houses ||= []);
+  for (let k = 0; k < n * 12 && placed.length < n; k++) {
     const a = w.r(0, Math.PI * 2), d = Math.sqrt(w.rng()) * r;
     const x = cx + Math.cos(a) * d, z = cz + Math.sin(a) * d;
     const wd = w.r(o.minW || 3, o.maxW || 5), dp = w.r(o.minW || 3, o.maxW || 5);
     if (w.heightAt(x, z) <= 0.4 || w.heightAt(x + wd / 2, z) <= 0.4 || w.heightAt(x, z + dp / 2) <= 0.4) continue;
-    if (placed.some(([px, pz, pw]) => Math.abs(px - x) < (pw + wd) / 2 + 1.2 && Math.abs(pz - z) < (pw + dp) / 2 + 1.2)) continue;
+    if (all.some(([px, pz, pw]) => Math.abs(px - x) < (pw + wd) / 2 + 1.2 && Math.abs(pz - z) < (pw + dp) / 2 + 1.2)) continue;
     if (o.avoid && o.avoid(x, z)) continue;
+    const half = Math.max(wd, dp) / 2;
+    if (KEEP.some(([kx, kz, kr]) => Math.hypot(x - kx, z - kz) < kr + half) || onRoad(x, z, half + 1.6)) continue;
     const h = w.r(o.minH || 3, o.maxH || 5.5);
     lightHouse(w, x, z, wd, dp, h, { roof: o.roof, balcony: o.balcony, wall: o.walls ? w.pick(o.walls) : undefined });
     placed.push([x, z, Math.max(wd, dp)]);
+    all.push(placed[placed.length - 1]);
   }
-  for (let i = 0; i < Math.ceil(n / 4); i++) palm(w, cx + w.r(-r, r), cz + w.r(-r, r));
+  for (let i = 0; i < Math.ceil(n / 4); i++) {
+    const x = cx + w.r(-r, r), z = cz + w.r(-r, r);
+    if (!onRoad(x, z, 2) && !placed.some(([px, pz, pw]) => Math.abs(px - x) < pw / 2 + 1 && Math.abs(pz - z) < pw / 2 + 1)) palm(w, x, z);
+  }
   return placed;
 }
 
@@ -275,13 +317,16 @@ export const tenerife = {
   id: 'tenerife',
   name: 'Teneriffa',
   seed: 103,
-  theme: { sky: ['#1a7fd8', '#7cc8ff', '#eaf7ff'], fog: '#d6eeff', sea: '#1f8fc9', fogNear: 140, fogFar: 420 },
+  theme: { sky: ['#1a7fd8', '#7cc8ff', '#eaf7ff'], fog: '#d6eeff', sea: '#1f8fc9', fogNear: 150, fogFar: 480 },
   stars: {
     cablecar: 'Seilbahn zum Teide', teide: 'Teide-Gipfel (3718 m)', drago: 'Drachenbaum von Icod', masca: 'Masca-Schlucht',
     whales: 'Wal-Tour Los Gigantes', pyramids: 'Pyramiden von Güímar', lighthouse: 'Leuchtturm von Teno',
+    waterpark: 'Wasserrutsche', observatory: 'Sternwarte Izaña', castle: 'Castillo de San Miguel', camels: 'Kamel-Safari',
+    tram: 'Straßenbahn nach La Laguna', lunar: 'Paisaje Lunar', rental: 'Mietwagen-Profi (3 Aufträge)',
   },
+  missionStar: { id: 'rental', count: 3 },
   build(w) {
-    const cell = 2.5, x0 = -205, z0 = -175, cols = Math.ceil(410 / cell), rows = Math.ceil(335 / cell);
+    const cell = 3, x0 = -205 * S, z0 = -175 * S, cols = Math.ceil(410 * S / cell), rows = Math.ceil(345 * S / cell);
     w.terrain({ x0, z0, cols, rows, cell, step: 0.5, height: (x, z) => heightM(x, z) / 100, color: colorAt });
     w.killY = -1.6;
 
@@ -299,6 +344,28 @@ export const tenerife = {
     w.spawn.set(ax, ay, az - 12);
     w.spawnYaw = 0;
     sign(w, 'Willkommen auf Teneriffa!', [ax, az - 26], 6, { bg: '#ffd23f', fg: '#17233b', size: 1.3 });
+
+    // Mietwagen am Flughafen: einsteigen und die große Insel erkunden, Aufträge erledigen
+    lightHouse(w, ax - 13, az - 6, 6, 3.4, 3, { wall: '#ffd23f', roofColor: '#17233b' });
+    sign(w, 'Mietwagen', [ax - 13, az - 6], 5.5, { bg: '#17233b', fg: '#ffd23f' });
+    w.box(14, 0.08, 7, '#5a5f66', ax - 12, ay + 0.05, az - 13);
+    w.car({ x: ax - 17, z: az - 13, kind: 'taxi', ry: Math.PI });
+    w.car({ x: ax - 13, z: az - 13, kind: 'sport', ry: Math.PI });
+    w.car({ x: ax - 9, z: az - 13, kind: 'monster', ry: Math.PI });
+    w.star('rental', ax - 13, ay + 16, az - 6, 'Mietwagen-Profi');
+    w.car({ x: P.santaCruz[0] - 10, z: P.santaCruz[1] - 4, kind: 'police', ry: Math.PI / 2 });
+    w.car({ x: P.puerto[0] + 12, z: P.puerto[1] - 6, kind: 'pizza', ry: Math.PI });
+    w.car({ x: P.parador[0] + 7, z: P.parador[1] + 3, kind: 'taxi', ry: 0 });
+    w.mission({ type: 'taxi', label: 'Taxi zum Strand', start: [ax - 4, az - 22], time: 90, reward: 40,
+      stages: [{ at: [ax + 2, az - 16], text: 'Hol die Urlauberin am Terminal ab', person: true }, { at: [P.cristianos[0] + 4, P.cristianos[1] - 6], text: 'Fahr sie nach Los Cristianos' }] });
+    w.mission({ type: 'race', label: 'Rallye Las Cañadas', start: [P.parador[0] + 6, P.parador[1] - 4], time: 120, reward: 60,
+      stages: [{ at: P.tauce, text: 'Checkpoint Boca de Tauce' }, { at: [P.cableBase[0] + 4, P.cableBase[1] + 4], text: 'Checkpoint Seilbahn' }, { at: P.portillo, text: 'Checkpoint El Portillo' }, { at: [P.parador[0] + 6, P.parador[1] + 6], text: 'Ziel: Parador' }] });
+    w.mission({ type: 'pizza', label: 'Pizza für La Orotava', start: [P.puerto[0] + 12, P.puerto[1] - 11], time: 75, reward: 40,
+      stages: [{ at: [P.orotava[0] + 2, P.orotava[1] + 8], text: 'Liefere die Pizza nach La Orotava' }, { at: [P.realejos[0], P.realejos[1] + 6], text: 'Noch eine nach Los Realejos' }] });
+    w.mission({ type: 'taxi', label: 'Taxi zur Altstadt', start: [P.santaCruz[0] - 10, P.santaCruz[1] - 10], time: 80, reward: 40,
+      stages: [{ at: [P.santaCruz[0] - 4, P.santaCruz[1] - 12], text: 'Hol den Fahrgast am Hafen ab', person: true }, { at: [P.laguna[0] - 8, P.laguna[1] + 10], text: 'Bring ihn nach La Laguna' }] });
+    w.mission({ type: 'police', label: 'Raser an der Küste', start: [P.americas[0] + 14, P.americas[1] - 16], time: 70, reward: 50, speed: 13,
+      path: [[P.americas[0] + 10, P.americas[1] - 20], [P.cristianos[0] + 16, P.cristianos[1] - 18], [P.airport[0] - 30, P.airport[1] - 14], [P.cristianos[0] + 22, P.cristianos[1] - 28], [P.adeje[0] + 6, P.adeje[1] + 6]] });
 
     // Straßen mit Münzen, Guagua (Linienbus) auf der TF-1
     ROADS.forEach((r, i) => road(w, r, i === 2 ? 14 : 22));
@@ -379,9 +446,9 @@ export const tenerife = {
     lightHouse(w, P.parador[0], P.parador[1], 9, 5, 3.4, { wall: '#efe3cf', roof: 'tile' });
     sign(w, 'Las Cañadas', P.parador, 6);
     // Retama (weiß blühend) und Tajinaste rojo (rote Blütensäulen)
-    for (let k = 0; k < 70; k++) {
+    for (let k = 0; k < 140; k++) {
       const a = w.r(0, Math.PI * 2), d = Math.sqrt(w.rng());
-      const x = P.caldera[0] + Math.cos(a) * d * 38, z = P.caldera[1] + Math.sin(a) * d * 25;
+      const x = P.caldera[0] + Math.cos(a) * d * 38 * S, z = P.caldera[1] + Math.sin(a) * d * 25 * S;
       const h = w.heightAt(x, z);
       if (h < 20 || h > 23.5) continue;
       if (k % 3 === 0) { w.box(0.35, 2.6, 0.35, '#d6283c', x, h + 1.3, z); w.box(0.6, 0.6, 0.6, '#5a8a3a', x, h + 0.3, z); }
@@ -392,22 +459,22 @@ export const tenerife = {
 
     // Kanarenkiefern im Waldgürtel, Lorbeerwald in Anaga, Wolfsmilch im Süden
     let placed = 0;
-    for (let k = 0; k < 4000 && placed < 170; k++) {
-      const x = w.r(-190, 190), z = w.r(-165, 160), h = w.heightAt(x, z);
+    for (let k = 0; k < 8000 && placed < 320; k++) {
+      const x = w.r(-190, 190) * S, z = w.r(-165, 160) * S, h = w.heightAt(x, z);
       if (h < 10.5 || h > 20.5) continue;
-      if (Math.hypot((x - P.caldera[0]) / 40, (z - P.caldera[1]) / 27) < 1.05) continue;
+      if (Math.hypot((x - P.caldera[0]) / (40 * S), (z - P.caldera[1]) / (27 * S)) < 1.05) continue;
       w.tree('pine', x, z, w.r(1.1, 1.5), h, false);
       placed++;
     }
     placed = 0;
-    for (let k = 0; k < 2000 && placed < 45; k++) {
-      const x = w.r(100, 195), z = w.r(-165, -120), h = w.heightAt(x, z);
-      if (h < 2 || lineDist(x, z, ANAGA) > 12) continue;
+    for (let k = 0; k < 3000 && placed < 80; k++) {
+      const x = w.r(100, 195) * S, z = w.r(-165, -120) * S, h = w.heightAt(x, z);
+      if (h < 2 || lineDist(x, z, ANAGA) > 12 * S) continue;
       w.tree('oak', x, z, w.r(0.9, 1.3), h, false);
       placed++;
     }
-    for (let k = 0; k < 160; k++) {
-      const x = w.r(-150, 80), z = w.r(30, 160), h = w.heightAt(x, z);
+    for (let k = 0; k < 300; k++) {
+      const x = w.r(-150, 80) * S, z = w.r(30, 160) * S, h = w.heightAt(x, z);
       if (h < 0.8 || h > 9 || northness(x, z) > 0) continue;
       const s = w.r(0.4, 0.9);
       w.box(s * 1.3, s * 0.7, s * 1.2, k % 2 ? '#7f9a5a' : '#9aa86a', x, h + s * 0.35, z, w.r(0, 3));
@@ -415,11 +482,11 @@ export const tenerife = {
 
     // Wolkenmeer über der Nordseite (Passatwolken)
     const cloudGeo = new THREE.BoxGeometry(1, 1, 1);
-    const clouds = new THREE.InstancedMesh(cloudGeo, new THREE.MeshLambertMaterial({ color: '#ffffff', transparent: true, opacity: 0.72, depthWrite: false }), 90);
+    const clouds = new THREE.InstancedMesh(cloudGeo, new THREE.MeshLambertMaterial({ color: '#ffffff', transparent: true, opacity: 0.72, depthWrite: false }), 160);
     const m4 = new THREE.Matrix4();
     let ci = 0;
-    for (let k = 0; k < 3000 && ci < 90; k++) {
-      const x = w.r(-150, 170), z = w.r(-150, 0), h = w.heightAt(x, z);
+    for (let k = 0; k < 5000 && ci < 160; k++) {
+      const x = w.r(-150, 170) * S, z = w.r(-150, 0) * S, h = w.heightAt(x, z);
       if (northness(x, z) < 0.6 || h < 4 || h > 11) continue;
       m4.compose(new THREE.Vector3(x, w.r(12.5, 14.5), z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, w.r(0, 3), 0)), new THREE.Vector3(w.r(8, 16), w.r(1.5, 2.6), w.r(6, 12)));
       clouds.setMatrixAt(ci++, m4);
@@ -492,8 +559,8 @@ export const tenerife = {
     town(w, P.orotava[0], P.orotava[1], 10, 18, { roof: 'tile', balcony: '#6b4423', walls: ['#f6f1e7', '#f2d16b', '#ffffff', '#e8b04a'] });
     sign(w, 'La Orotava', P.orotava, 8);
     // Bananenplantagen an der Nordküste
-    for (let k = 0; k < 14; k++) {
-      const t = w.rng(), x = P.puerto[0] - 20 - t * 80, z = P.puerto[1] + 6 + w.r(-4, 6) + t * 20;
+    for (let k = 0; k < 24; k++) {
+      const t = w.rng(), x = P.puerto[0] - (20 + t * 80) * S, z = P.puerto[1] + 6 + w.r(-4, 6) + t * 20 * S;
       const h = w.heightAt(x, z);
       if (h < 0.6 || h > 6) continue;
       w.box(8, 1.1, 0.3, '#d9cbb0', x, h + 0.55, z - 3); w.box(8, 1.1, 0.3, '#d9cbb0', x, h + 0.55, z + 3);
@@ -521,7 +588,7 @@ export const tenerife = {
     w.star('drago', dx0, dy0 + 7.6, dz0, 'Drachenbaum von Icod');
     sign(w, 'Drago Milenario – ein uralter Drachenbaum', [dx0, dz0 + 10], 6, { bg: '#4f8a3a', size: 0.9 });
     // Garachico mit dem Roque und Naturbecken
-    town(w, P.garachico[0], P.garachico[1] + 1, 6, 12, { roof: 'tile' });
+    town(w, P.garachico[0], P.garachico[1] + 6, 6, 12, { roof: 'tile' });
     sign(w, 'Garachico', P.garachico, 7);
     town(w, P.buenavista[0], P.buenavista[1] + 2, 6, 10);
     // Teno: Leuchtturm (Wendeltreppe)
@@ -562,8 +629,8 @@ export const tenerife = {
     for (const [ddx, ddz] of [[-20, -10], [-26, -24], [-30, 4]]) w.animal('whale', { pos: new THREE.Vector3(gix + ddx, -0.8, giz + ddz), y: -1.6, behavior: 'jump', radius: 9 });
     for (const [ddx, ddz] of [[-14, -20], [-24, 0]]) w.animal('dolphin', { pos: new THREE.Vector3(gix + ddx, -0.8, giz + ddz), y: -0.8, behavior: 'jump', radius: 7 });
     // Süden: Hotels, Strände, Montaña Roja, El Médano
-    town(w, P.americas[0], P.americas[1] - 2, 12, 22, { minW: 4, maxW: 7, minH: 6, maxH: 13, balcony: '#ffffff', walls: ['#ffffff', '#f6f1e7', '#f4e2c8'] });
-    town(w, P.cristianos[0] + 2, P.cristianos[1] - 4, 7, 12, { minH: 3, maxH: 7 });
+    town(w, P.americas[0], P.americas[1] - 10, 12, 22, { minW: 4, maxW: 7, minH: 6, maxH: 13, balcony: '#ffffff', walls: ['#ffffff', '#f6f1e7', '#f4e2c8'] });
+    town(w, P.cristianos[0] + 2, P.cristianos[1] - 10, 7, 12, { minH: 3, maxH: 7 });
     sign(w, 'Playa de las Américas', P.americas, 14);
     sign(w, 'Los Cristianos', P.cristianos, 9);
     for (let k = 0; k < 10; k++) {
@@ -572,7 +639,7 @@ export const tenerife = {
       w.box(0.12, 2, 0.12, '#ffffff', x, w.heightAt(x, z) + 1, z);
       w.cone(1.1, 0.6, k % 2 ? '#ff595e' : '#ffd23f', x, w.heightAt(x, z) + 1.9, z, { seg: 8, shadow: false });
     }
-    town(w, P.medano[0] + 3, P.medano[1] - 2, 5, 9);
+    town(w, P.medano[0] + 3, P.medano[1] - 9, 5, 9);
     sign(w, 'El Médano', P.medano, 7);
     for (let k = 0; k < 4; k++) {
       const kite = w.box(1.6, 0.1, 0.7, ['#ff595e', '#2fbf4a', '#ffd23f', '#2f7df6'][k], P.medano[0] + 6 + k * 3, 9 + k, P.medano[1] + 12, 0, 0, 0.6);
@@ -583,6 +650,198 @@ export const tenerife = {
     town(w, P.granadilla[0], P.granadilla[1], 5, 8);
     town(w, P.adeje[0], P.adeje[1], 5, 8);
     town(w, P.sanJuan[0] + 2, P.sanJuan[1], 4, 6);
+
+    // ---------- Weitere Orte ----------
+    const TOWNS = [
+      ['tacoronte', 'Tacoronte', 7, 12, { roof: 'tile' }], ['santaUrsula', 'Santa Úrsula', 6, 10], ['realejos', 'Los Realejos', 8, 14, { roof: 'tile', balcony: '#6b4423' }],
+      ['rambla', 'San Juan de la Rambla', 5, 8, { roof: 'tile' }], ['bajamar', 'Bajamar', 5, 9], ['sanAndres', 'San Andrés', 5, 9, { walls: ['#f2d16b', '#5b8fd6', '#d2693c', '#7fb069', '#ffffff'] }],
+      ['tegueste', 'Tegueste', 5, 8, { roof: 'tile' }], ['fasnia', 'Fasnia', 4, 6], ['poris', 'Poris de Abona', 4, 7], ['arico', 'Arico', 4, 6, { roof: 'tile' }],
+      ['sanIsidro', 'San Isidro', 7, 12], ['abrigos', 'Los Abrigos', 4, 7], ['galletas', 'Las Galletas', 6, 10, { balcony: '#ffffff' }],
+      ['arona', 'Arona', 5, 8, { roof: 'tile' }], ['caleta', 'La Caleta', 5, 8, { balcony: '#ffffff' }], ['callao', 'Callao Salvaje', 6, 10, { minH: 4, maxH: 8, balcony: '#ffffff' }],
+      ['guia', 'Guía de Isora', 6, 10], ['alcala', 'Alcalá', 4, 7], ['arena', 'Puerto de Santiago', 6, 11, { minH: 3, maxH: 7, balcony: '#ffffff' }],
+      ['tamaimo', 'Tamaimo', 4, 6], ['tanque', 'El Tanque', 4, 6, { roof: 'tile' }],
+    ];
+    for (const [k, name, r, n, o] of TOWNS) { town(w, P[k][0], P[k][1], r, n, o); sign(w, name, P[k], 8, { size: 1 }); }
+    sign(w, 'Adeje', P.adeje, 8, { size: 1 });
+    sign(w, 'Granadilla', P.granadilla, 8, { size: 1 });
+    sign(w, 'Santiago del Teide', P.santiago, 8, { size: 1 });
+    town(w, P.santiago[0], P.santiago[1], 4, 6, { roof: 'tile' });
+    sign(w, 'Playa San Juan', P.sanJuan, 7, { size: 1 });
+
+    // Wasserpark: Turm im Tempelstil, Rutsche ins Wellenbecken
+    const [wpx, wpz] = P.waterpark, wpy = w.heightAt(wpx, wpz);
+    w.box(24, 0.08, 20, '#efe3c8', wpx, wpy + 0.04, wpz);
+    w.water(wpx + 5, wpz + 4, 11, 8, { top: wpy + 0.12, color: '#38d0f0' });
+    w.water(wpx - 7, wpz + 6, 6, 4, { top: wpy + 0.12, color: '#5fe0f5' });
+    const twx = wpx - 7, twz = wpz - 5, twTop = wpy + 13;
+    w.block(twx, twTop - 6, twz, 6, 7, 6, '#f2d16b');
+    w.block(twx, twTop, twz, 4.4, 6, 4.4, '#e8b04a');
+    w.box(5.4, 0.5, 5.4, '#c0392b', twx, twTop + 0.25, twz);
+    w.cone(2.6, 4.5, '#ffd23f', twx, twTop + 0.5, twz, { seg: 8 });
+    for (const [ddx, ddz] of [[-2.6, -2.6], [2.6, -2.6], [-2.6, 2.6], [2.6, 2.6]]) w.cone(0.6, 2.4, '#ffd23f', twx + ddx, twTop - 5.5, twz + ddz, { seg: 6, shadow: false });
+    const slidePts = [[twx + 2.6, twTop - 0.4, twz], [twx + 6, twTop - 3, twz - 3], [twx + 9, twTop - 6, twz + 1], [twx + 6, twTop - 9, twz + 5], [twx + 10, wpy + 2, twz + 7], [wpx + 4, wpy + 0.3, wpz + 4]];
+    const slideCurve = new THREE.CatmullRomCurve3(slidePts.map((q) => new THREE.Vector3(...q)));
+    for (let k = 0; k <= 40; k++) {
+      const p = slideCurve.getPointAt(k / 40), tn = slideCurve.getTangentAt(k / 40);
+      w.box(1.6, 0.25, 1.4, k % 2 ? '#2f7df6' : '#4cc9f0', p.x, p.y - 0.45, p.z, Math.atan2(tn.x, tn.z));
+    }
+    const tube = new THREE.Group();
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.75, 0.32, 8, 16), new THREE.MeshLambertMaterial({ color: '#ff595e' }));
+    ring.rotation.x = Math.PI / 2;
+    tube.add(ring);
+    const wst2 = w.station(wpx + 2, wpz - 7, 'Wasserrutsche', '#2f7df6', wpy);
+    w.addRide(pathRide(w, {
+      points: slidePts, closed: false, duration: 7, vehicle: tube, seat: [0, -0.2, 0], flat: true, idle: 'wait', name: 'Wasserrutsche', starId: 'waterpark', station: wst2,
+      exit: new THREE.Vector3(wpx + 4, wpy, wpz - 1),
+      animate(v, t, riding) { if (riding) v.rotateY(t * 4 % (Math.PI * 2)); },
+    }));
+    for (let k = 0; k < 8; k++) w.box(0.9, 0.25, 2, k % 2 ? '#ffffff' : '#ff595e', wpx - 9 + k * 2.2, wpy + 0.2, wpz - 1);
+    for (let k = 0; k < 10; k++) palm(w, wpx + w.r(-11, 11), wpz + (k % 2 ? 9 : -9) + w.r(-1, 1));
+    sign(w, 'Wasserpark', [wpx, wpz - 9], 7, { bg: '#2f7df6', size: 1.3 });
+
+    // Affenpark bei Los Cristianos
+    const [mkx, mkz] = P.monkeys, mky = w.heightAt(mkx, mkz);
+    for (let k = 0; k < 4; k++) w.tree('palm', mkx + w.r(-4, 4), mkz + w.r(-4, 4), w.r(0.9, 1.2), mky, false);
+    for (let i = 0; i < 4; i++) w.animal('monkey', { pos: new THREE.Vector3(mkx + w.r(-3, 3), 0, mkz + w.r(-3, 3)), radius: 4, speed: 1.4, hungry: i === 0 });
+    sign(w, 'Affenpark', P.monkeys, 6, { bg: '#7a4a2a' });
+
+    // Barranco del Infierno: Wasserfall am Ende der Schlucht
+    const [bix, biz] = P.barranco, biy = w.heightAt(bix, biz);
+    w.box(6, 9, 3, '#6b5a50', bix, biy + 4.5, biz - 3);
+    const fall = w.box(1.4, 8, 0.3, '#9fe3ff', bix, biy + 4.2, biz - 1.35);
+    void fall;
+    w.water(bix, biz + 0.5, 4, 3, { top: biy + 0.12, color: '#4fc0f0' });
+    for (let k = 0; k < 6; k++) { const x = bix + w.r(-5, 5), z = biz + w.r(2, 6); w.tree('oak', x, z, w.r(0.7, 1), w.heightAt(x, z), false); }
+    sign(w, 'Barranco del Infierno', [bix, biz + 3], 6, { bg: '#2f6a3a', size: 0.9 });
+
+    // Sternwarte Izaña auf der Cumbre Dorsal (Tor, Kuppel erklimmen)
+    const [izx, izz] = P.izana, izy = w.heightAt(izx, izz);
+    w.enclosure({ x: izx, z: izz, w: 12, d: 12, side: 's', h: 4.4, color: '#e9edf2', label: 'Sternwarte Izaña', y: izy, cap: '#c8ccd2' });
+    w.block(izx, izy + 3, izz - 1, 6, 3, 6, '#ffffff');
+    w.block(izx, izy + 2, izz + 2.8, 2, 2, 1.2, '#d9dee5');
+    w.block(izx, izy + 1, izz + 4, 2, 1, 1.2, '#d9dee5');
+    w.sphere(2, '#f4f6f8', izx - 1.2, izy + 3, izz - 2, { half: true });
+    w.box(0.6, 2.4, 1.2, '#2b2b2b', izx - 1.2, izy + 4.3, izz - 2.2, 0, 0.5);
+    w.star('observatory', izx + 1.6, izy + 3, izz + 0.6, 'Sternwarte Izaña');
+    for (const [ddx, ddz, r] of [[-14, -4, 2.2], [-10, 8, 1.8], [12, -6, 2.6], [15, 5, 1.6]]) {
+      const x = izx + ddx, z = izz + ddz, y = w.heightAt(x, z);
+      w.block(x, y + 2.4, z, r * 2, 2.4, r * 2, '#ffffff');
+      w.sphere(r, '#f4f6f8', x, y + 2.4, z, { half: true, seg: 12 });
+    }
+    sign(w, 'Sternwarte Izaña (2390 m)', [izx, izz + 9], 6, { bg: '#3d5a80' });
+
+    // Mirador de Humboldt: Blick ins Orotava-Tal
+    const [hux, huz] = P.humboldt, huy = w.heightAt(hux, huz);
+    w.box(6, 0.3, 4, '#c9b48a', hux, huy + 0.15, huz);
+    for (let k = -2; k <= 2; k++) w.box(0.15, 1, 0.15, '#6b4423', hux + k * 1.4, huy + 0.6, huz - 2);
+    w.box(6, 0.15, 0.15, '#6b4423', hux, huy + 1.1, huz - 2);
+    w.box(0.3, 1.3, 0.3, '#2b2b2b', hux + 1.5, huy + 0.8, huz - 1); w.box(0.4, 0.4, 0.9, '#3d5a80', hux + 1.5, huy + 1.6, huz - 1.1);
+    sign(w, 'Mirador de Humboldt', P.humboldt, 5, { bg: '#2f6a3a', size: 0.9 });
+    // Casa de los Balcones in La Orotava
+    const [cbx2, cbz2] = P.casaBalcones;
+    const cbTop = lightHouse(w, cbx2, cbz2, 9, 4, 5.6, { wall: '#f6f1e7', roof: 'tile' });
+    for (let f = 0; f < 2; f++) w.box(8, 0.8, 0.7, '#6b4423', cbx2, cbTop - 4.2 + f * 2.8, cbz2 + 2.35);
+    sign(w, 'Casa de los Balcones', P.casaBalcones, 9, { bg: '#6b4423', size: 0.9 });
+
+    // Castillo de San Miguel in Garachico
+    const [csx, csz] = P.castillo, csy = w.heightAt(csx, csz);
+    w.enclosure({ x: csx, z: csz, w: 8, d: 8, side: 's', h: 4.4, color: '#7a7470', label: 'Castillo de San Miguel', y: csy, cap: '#5a5552' });
+    for (let k = 0; k < 4; k++) for (const s of [-1, 1]) {
+      w.box(0.9, 0.9, 0.9, '#7a7470', csx - 3 + k * 2, csy + 5, csz + s * 3.8);
+      w.box(0.9, 0.9, 0.9, '#7a7470', csx + s * 3.8, csy + 5, csz - 3 + k * 2);
+    }
+    w.block(csx - 1.5, csy + 1.2, csz - 1.5, 2.2, 1.2, 2.2, '#8a8480');
+    w.block(csx + 1, csy + 2.4, csz - 2, 2.2, 2.4, 2.2, '#8a8480');
+    w.star('castle', csx + 1, csy + 2.4, csz - 2, 'Castillo de San Miguel');
+    w.box(0.5, 0.5, 2, '#2b2b2b', csx + 2.6, csy + 4.8, csz - 4.4);
+
+    // Kamel-Safari bei El Tanque
+    const [kmx, kmz] = P.camel, kmy = w.heightAt(kmx, kmz);
+    const kst = w.station(kmx + 4.5, kmz, 'Kamel-Safari', '#c9a46a', kmy);
+    const camel = makeAnimal('camel', { pos: new THREE.Vector3() }).g;
+    const camelLoop = [];
+    for (let k = 0; k < 10; k++) { const a = (k / 10) * Math.PI * 2; camelLoop.push([kmx - 3 + Math.cos(a) * 6, 0, kmz + Math.sin(a) * 5]); }
+    w.addRide(pathRide(w, {
+      points: camelLoop, closed: true, duration: 18, vehicle: camel, seat: [0, 2.3, -0.2], ground: true, flat: true, idle: 'wait', name: 'Kamel-Safari', starId: 'camels', station: kst,
+      exit: new THREE.Vector3(kmx + 4.5, kmy, kmz + 3),
+    }));
+    for (let i = 0; i < 3; i++) w.animal('camel', { pos: new THREE.Vector3(kmx - 3 + w.r(-8, 8), 0, kmz + 9 + w.r(-2, 2)), radius: 3, speed: 0.6, hungry: i === 1 });
+    sign(w, 'Kamel-Safari', [kmx + 4.5, kmz - 3], 6, { bg: '#c9a46a' });
+
+    // Paisaje Lunar: weiße Tuffsäulen – hüpf nach oben!
+    const [lux, luz] = P.lunar;
+    const pillars = [[0, 0, 1], [2.4, 0.8, 2], [4.4, -0.6, 3], [5.6, -2.8, 3.9], [4.2, -4.8, 4.8], [1.8, -5.4, 5.6], [-0.4, -4.2, 6.4]];
+    pillars.forEach(([ddx, ddz, top], i) => {
+      const x = lux + ddx, z = luz + ddz, g = w.heightAt(x, z);
+      w.block(x, g + top, z, i === pillars.length - 1 ? 2.4 : 1.9, top + 1, i === pillars.length - 1 ? 2.4 : 1.9, i % 2 ? '#efe6d2' : '#e2d6bc');
+    });
+    const [lpx2, lpz2] = [lux - 0.4, luz - 4.2];
+    w.star('lunar', lpx2, w.heightAt(lpx2, lpz2) + 6.4, lpz2, 'Paisaje Lunar');
+    for (let k = 0; k < 14; k++) {
+      const a = w.r(0, Math.PI * 2), d = w.r(5, 9), x = lux + Math.cos(a) * d, z = luz - 2 + Math.sin(a) * d;
+      const hh = w.r(2, 6);
+      w.cone(w.r(0.6, 1.1), hh, '#ece2cc', x, w.heightAt(x, z), z, { seg: 6, shadow: false });
+    }
+    sign(w, 'Paisaje Lunar', [lux + 4, luz + 3], 5, { bg: '#b39062' });
+
+    // Straßenbahn Santa Cruz – La Laguna
+    const tram = new THREE.Group();
+    part(tram, 1.9, 2.1, 7, '#ffffff', 0, 1.25, 0);
+    part(tram, 1.95, 0.8, 6.4, '#3d5a80', 0, 1.7, 0);
+    part(tram, 1.96, 0.25, 7.02, '#2fa84f', 0, 0.35, 0);
+    part(tram, 0.1, 0.9, 0.1, '#2b2b2b', 0, 2.75, 0);
+    const tst = w.station(P.tram[0] + 3.5, P.tram[1] + 1, 'Straßenbahn', '#2fa84f', w.heightAt(P.tram[0] + 3.5, P.tram[1] + 1));
+    const tramPts = [];
+    for (let i = 1; i < TRAM.length; i++) {
+      const [a1, b1] = TRAM[i - 1], [a2, b2] = TRAM[i], n = Math.ceil(Math.hypot(a2 - a1, b2 - b1) / 6);
+      for (let k = 0; k < n; k++) tramPts.push([a1 + (a2 - a1) * k / n, 0.1, b1 + (b2 - b1) * k / n]);
+    }
+    tramPts.push([TRAM[TRAM.length - 1][0], 0.1, TRAM[TRAM.length - 1][1]]);
+    w.addRide(pathRide(w, {
+      points: tramPts, closed: false, duration: 16, vehicle: tram, seat: [0, 0.4, 1.5], ground: true, flat: true, idle: 'wait', name: 'Straßenbahn nach La Laguna', starId: 'tram', station: tst,
+      exit: new THREE.Vector3(TRAM[TRAM.length - 1][0] + 2.5, 0, TRAM[TRAM.length - 1][1]),
+    }));
+    for (const [x, , z] of tramPts) { const h = w.heightAt(x, z); if (h > 0) w.box(2.2, 0.06, 2.2, '#8d939b', x, h + 0.05, z); }
+
+    // Santa Cruz: Plaza de España mit Wasserbecken und Denkmal
+    const [plx, plz] = [P.santaCruz[0] + 5, P.santaCruz[1] + 6], ply = w.heightAt(plx, plz);
+    w.water(plx, plz, 6, 6, { top: ply + 0.1, color: '#4fc0f0' });
+    w.box(1, 6, 1, '#efe3cf', plx, ply + 3, plz);
+    w.box(2.6, 0.6, 0.6, '#efe3cf', plx, ply + 4.6, plz);
+
+    // Punta del Hidalgo: moderner Leuchtturm, Roques de Anaga vor Benijo
+    const [hix, hiz] = P.hidalgo, hiy = w.heightAt(hix, hiz);
+    w.block(hix, hiy + 11, hiz, 2.2, 11, 2.2, '#f4f6f8');
+    w.box(2.8, 1.4, 2.8, '#fff4a0', hix, hiy + 11.8, hiz);
+    w.box(3, 0.4, 3, '#e8262b', hix, hiy + 12.7, hiz);
+    sign(w, 'Faro de Punta del Hidalgo', [hix, hiz + 4], 4, { size: 0.8 });
+    const [bnx, bnz] = P.benijo;
+    for (const [ddx, ddz, hh, r] of [[2, -9, 8, 2.6], [8, -11, 6, 2], [-4, -10, 5, 1.8]]) w.cone(r, hh + 3, '#4a4442', bnx + ddx, -3, bnz + ddz, { seg: 6 });
+    sign(w, 'Playa de Benijo', P.benijo, 5, { size: 0.9 });
+    const [ccx, ccz] = P.cruzCarmen, ccy = w.heightAt(ccx, ccz);
+    w.box(0.4, 4, 0.4, '#ffffff', ccx + 2, ccy + 2, ccz); w.box(2, 0.4, 0.4, '#ffffff', ccx + 2, ccy + 3, ccz);
+    sign(w, 'Cruz del Carmen', [ccx, ccz + 2], 6, { bg: '#2f6a3a', size: 0.9 });
+    // Charco de la Laja: Naturbecken an der Nordküste
+    const [rbx, rbz] = [P.rambla[0], P.rambla[1] - 4];
+    w.water(rbx, rbz, 5, 3, { top: 0.25, color: '#38c8f0' });
+    for (let k = 0; k < 8; k++) w.box(w.r(1, 2), w.r(0.8, 1.6), w.r(1, 2), '#3d3a38', rbx + w.r(-3.5, 3.5), 0.3, rbz + (k % 2 ? 2 : -2), w.r(0, 3));
+
+    // Fähre Los Cristianos – La Gomera, Nachbarinsel am Horizont
+    const gx2 = (-17.24 - LON0) * KX, gz2 = -(28.10 - LAT0) * KZ;
+    w.cone(95, 14, '#5f7a52', gx2, -6, gz2, { seg: 14, shadow: false });
+    w.sign('La Gomera', gx2 + 60, 14, gz2 - 40, { bg: '#2f6a3a', fg: '#ffffff', size: 2 });
+    const ferry = new THREE.Group();
+    part(ferry, 4, 2, 12, '#ffffff', 0, 0.4, 0);
+    part(ferry, 3.6, 1.6, 7, '#ffffff', 0, 2.2, -1);
+    part(ferry, 4.05, 0.5, 12.05, '#1f8fc9', 0, 0.2, 0);
+    part(ferry, 1, 1.6, 1, '#e8262b', 0, 3.6, -2);
+    w.add(ferry);
+    const fA = new THREE.Vector3(P.cristianos[0] - 6, -0.6, P.cristianos[1] + 12), fB = new THREE.Vector3(gx2 + 80, -0.6, gz2 - 30);
+    w.updaters.push((dt, t) => {
+      const c = (t / 70) % 2, k = c < 1 ? c : 2 - c;
+      ferry.position.lerpVectors(fA, fB, k);
+      ferry.rotation.y = Math.atan2(fB.x - fA.x, fB.z - fA.z) + (c < 1 ? 0 : Math.PI);
+    });
 
     // Tiere: Kanarienvögel, Eidechsen, Katzen, Hasen, Schildkröten
     for (let i = 0; i < 3; i++) w.animal('bird', { pos: new THREE.Vector3(P.orotava[0] + i * 4, 0, P.orotava[1]), y: 9 + i, behavior: 'flutter', radius: 6, colors: ['#ffe14d', '#f2c200', '#ffd23f'], scale: 0.55 });
