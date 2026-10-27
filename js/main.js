@@ -211,7 +211,7 @@ function moveAxis(axis, d, wasGrounded) {
 }
 
 const TERRAIN = { safe: true, terrain: true };
-const TERRAIN_STEP = 1.05;
+const TERRAIN_STEP = 1.55;
 function terrainTop() {
   const p = player.pos, r = R - 0.05;
   return Math.max(stage.heightAt(p.x - r, p.z - r), stage.heightAt(p.x + r, p.z - r), stage.heightAt(p.x - r, p.z + r), stage.heightAt(p.x + r, p.z + r));

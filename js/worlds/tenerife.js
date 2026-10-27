@@ -89,7 +89,7 @@ const ROADS = [
 
 // Ebene Flächen für Orte, Stationen, Parks (x, z, Radius in Einheiten)
 const PADS = [
-  [...P.teide, 3.2, 1.5], [...P.airport, 14], [...P.cableBase, 4], [...P.cableTop, 2.5, 2], [...P.parador, 4],
+  [...P.teide, 3.2, 1.5], [...P.airport, 11, 45], [...P.cableBase, 4], [...P.cableTop, 2.5, 2], [...P.parador, 4],
   [...P.icod, 8], [...P.guimar, 9], [...P.tenoFaro, 6], [...P.mascaBeach, 4], [...P.gigantes, 5], [...P.masca, 4],
   [...P.loro, 7], [...P.santaCruz, 7], [...P.laguna, 6], [...P.candelaria, 4], [...P.medano, 4], [...P.tfn, 9],
 ];
@@ -143,7 +143,7 @@ function baseHeight(x, z) {
   return Math.max(h, 8 + islet);
 }
 
-const padCache = PADS.map(([x, z, r, f = 8]) => [x, z, r, null, f]);
+const padCache = PADS.map(([x, z, r, f = 12]) => [x, z, r, null, f]);
 // Ebene Fläche mit weichem Übergang (Rand 8 Einheiten), damit keine Klippen an den Rändern entstehen
 function heightM(x, z) {
   const base = baseHeight(x, z);
