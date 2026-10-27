@@ -418,6 +418,20 @@ const BUILDERS = {
     bx(body, 0.2, 0.05, 0.4, '#5b8fd6', 0.18, 0.18, 0.1);
     return { g, body };
   },
+  crab(opts) {
+    const g = new THREE.Group();
+    const body = new THREE.Group();
+    g.add(body);
+    const c = opts.color || '#e0482a';
+    bx(body, 0.6, 0.22, 0.45, c, 0, 0.2, 0);
+    for (const s of [-1, 1]) {
+      bx(body, 0.08, 0.16, 0.08, c, s * 0.12, 0.36, 0.18);
+      bx(body, 0.1, 0.1, 0.1, '#111', s * 0.12, 0.47, 0.18);
+      for (let i = 0; i < 3; i++) bx(body, 0.32, 0.06, 0.07, c, s * 0.4, 0.12, -0.14 + i * 0.13);
+      bx(body, 0.2, 0.16, 0.2, c, s * 0.28, 0.22, 0.36);
+    }
+    return { g, body };
+  },
   seal() {
     const g = new THREE.Group();
     const body = new THREE.Group();
@@ -555,7 +569,7 @@ export const ANIMAL_NAMES = {
   lion: 'den Löwen', tiger: 'den Tiger', elephant: 'den Elefanten', giraffe: 'die Giraffe', zebra: 'das Zebra', horse: 'das Pferd',
   cow: 'die Kuh', bison: 'den Bison', camel: 'das Kamel', llama: 'das Lama', goat: 'die Ziege', hippo: 'das Nilpferd',
   kangaroo: 'das Känguru', koala: 'den Koala', panda: 'den Panda', monkey: 'den Affen', cat: 'die Katze', chicken: 'das Huhn',
-  emu: 'den Emu', lizard: 'die Eidechse', seal: 'die Robbe', whale: 'den Wal', fish: 'den Fisch', bat: 'die Fledermaus',
+  emu: 'den Emu', lizard: 'die Eidechse', crab: 'die Krabbe', seal: 'die Robbe', whale: 'den Wal', fish: 'den Fisch', bat: 'die Fledermaus',
   ghost: 'das Gespenst', spider: 'die Spinne', alien: 'das Marsmännchen', dragon: 'den Drachen', bird: 'den Vogel',
 };
 
@@ -588,7 +602,7 @@ export function makeAnimal(kind, o = {}) {
     bubble.scale.set(0.9, 0.9, 1);
     const top = { parrot: 1.4, flamingo: 3.2, penguin: 1.9, turtle: 1.5, sheep: 2.2, swan: 2.0, duck: 1.2, rabbit: 1.6, unicorn: 3.6, dog: 1.8,
       lion: 2.6, tiger: 2.2, elephant: 4.4, giraffe: 5.4, zebra: 2.9, horse: 3.4, cow: 2.6, bison: 3.0, camel: 4.0, llama: 3.6, goat: 2.0,
-      hippo: 2.4, kangaroo: 2.8, koala: 1.7, panda: 2.2, monkey: 1.9, cat: 1.3, chicken: 1.4, emu: 3.6, lizard: 0.9, seal: 1.4,
+      hippo: 2.4, kangaroo: 2.8, koala: 1.7, panda: 2.2, monkey: 1.9, cat: 1.3, chicken: 1.4, emu: 3.6, lizard: 0.9, crab: 0.9, seal: 1.4,
       ghost: 2.6, spider: 1.3, alien: 2.6 }[kind] || 2;
     bubble.position.y = top * (o.scale || 1);
     a.g.add(bubble);

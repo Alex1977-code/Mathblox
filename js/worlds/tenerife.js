@@ -4,6 +4,7 @@ import * as THREE from '../../vendor/three.module.min.js';
 import { pathRide, part } from '../rides.js';
 import { studTexture } from '../blocks.js';
 import { makeAnimal } from '../animals.js';
+import { compact } from './africa-kit.js';
 
 // S: Vergrößerung gegenüber dem ursprünglichen Maßstab (200 m pro Einheit); alle Gelände-Breiten skalieren mit
 const S = 1.5;
@@ -126,6 +127,32 @@ const PADS = [
   [...P.cactus, 13, 8], [...P.mall, 10, 8], [...P.palmetum, 8, 6], [...P.taoro, 7, 6],
 ];
 
+// Strände: [Name, lon, lat, Länge, goldener Sand?, Extras]. Liegen genau auf der Küstenlinie des Modells.
+const BEACH_LIST = [
+  ['Playa del Duque', -16.744, 28.091, 14, true, { tower: true }], ['Playa de Fañabé', -16.736, 28.083, 14, true, {}],
+  ['Playa de Troya', -16.729, 28.066, 12, true, { volley: true }], ['Playa de las Vistas', -16.720, 28.048, 16, true, { tower: true }],
+  ['Playa de la Arena', -16.835, 28.230, 10, false, {}], ['Playa Jardín', -16.561, 28.417, 14, false, { garden: true }],
+  ['Playa Martiánez', -16.538, 28.417, 8, false, {}], ['El Bollullo', -16.514, 28.407, 8, false, { wild: true }],
+  ['Playa del Socorro', -16.599, 28.396, 8, false, { surf: true }], ['Playa de El Médano', -16.536, 28.045, 14, true, { surf: true }],
+  ['La Tejita', -16.553, 28.034, 12, true, { wild: true }], ['Playa de Almáciga', -16.190, 28.567, 10, false, { wild: true, surf: true }],
+  ['Playa San Juan', -16.814, 28.182, 10, false, {}], ['El Puertito', -16.777, 28.114, 8, false, { turtles: true }],
+  ['Playa de Abades', -16.438, 28.143, 10, true, {}], ['Playa de Candelaria', -16.368, 28.352, 8, false, {}],
+];
+export const BEACHES = BEACH_LIST.map(([name, lo, la, len, gold, o]) => {
+  const [px, pz] = geo(lo, la);
+  let best = null, bd = Infinity;
+  for (let i = 0, j = COAST.length - 1; i < COAST.length; j = i++) {
+    const [ax, az] = COAST[j], [bx, bz] = COAST[i], dx = bx - ax, dz = bz - az, l2 = dx * dx + dz * dz;
+    const t = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / l2));
+    const qx = ax + dx * t, qz = az + dz * t, d = Math.hypot(px - qx, pz - qz);
+    if (d < bd) { bd = d; best = { x: qx, z: qz, ux: dx / Math.sqrt(l2), uz: dz / Math.sqrt(l2) }; }
+  }
+  let nx = best.uz, nz = -best.ux;                                   // Normale zum Meer hin
+  if (insideCoast(best.x + nx * 6, best.z + nz * 6)) { nx = -nx; nz = -nz; }
+  // Etwas landeinwärts, damit der Sand auf Land beginnt
+  return { name, len: len * S, gold, ...o, x: best.x - nx * 2, z: best.z - nz * 2, ux: best.ux, uz: best.uz, nx, nz };
+});
+
 // Sperrflächen für Häuser (x, z, Radius): Parks, Tore, Bahnhöfe
 const KEEP = [
   [...P.airport, 32], [...P.icod, 11], [...P.guimar, 12], [...P.loro, 10], [...P.auditorio, 6], [...P.candelaria, 7], [...P.cableBase, 7],
@@ -133,6 +160,7 @@ const KEEP = [
   [...P.hidalgo, 4], [...P.humboldt, 4], [...P.parador, 6], [...P.casaBalcones, 5],
   [...P.cactus, 16], [...P.mall, 14], [...P.palmetum, 11], [...P.taoro, 9], [...P.rock, 6], [P.loro[0] + 11, P.loro[1] - 2, 6],
   [P.taoro[0], P.taoro[1] - 9, 4], [P.puerto[0] - 2, P.puerto[1] - 5, 6], [...P.whale, 7],
+  ...BEACHES.flatMap((b) => [-0.4, -0.2, 0, 0.2, 0.4].map((t) => [b.x + b.ux * b.len * t, b.z + b.uz * b.len * t, 4])),
 ];
 const onRoad = (x, z, m) => ROADS.some((r) => lineDist(x, z, r) < m) || lineDist(x, z, TRAM) < m;
 
@@ -386,6 +414,7 @@ export const tenerife = {
     const cell = 3, x0 = -205 * S, z0 = -175 * S, cols = Math.ceil(410 * S / cell), rows = Math.ceil(345 * S / cell);
     w.terrain({ x0, z0, cols, rows, cell, step: 0.5, height: (x, z) => heightM(x, z) / 100, color: colorAt });
     w.killY = -1.6;
+    w.viewDist = 80; // viele Tiere: nur die nahen zeichnen
 
     // Ankunft: Flughafen Teneriffa Süd
     const [ax, az] = P.airport, ay = w.heightAt(ax, az);
@@ -1020,6 +1049,85 @@ export const tenerife = {
       ferry.rotation.y = Math.atan2(fB.x - fA.x, fB.z - fA.z) + (c < 1 ? 0 : Math.PI);
     });
 
+
+    // ---------- Strände ----------
+    // Sandstreifen entlang der Küste (golden oder schwarzer Vulkansand), Schirme, Liegen, Möwen und Krabben
+    for (const b of BEACHES) {
+      const sand = b.gold ? '#f2c94c' : '#3d3a38', ry = Math.atan2(b.ux, b.uz);
+      const at = (t, n) => [b.x + b.ux * t + b.nx * n, b.z + b.uz * t + b.nz * n];
+      for (let t = -b.len / 2; t <= b.len / 2; t += 3) {
+        for (const [n, y] of [[-1.5, null], [1.5, 0.3], [4.5, 0.05]]) {
+          const [x, z] = at(t, n), h = w.heightAt(x, z);
+          if (y === null && h > 3) continue;
+          w.box(3.2, 0.3, 3.2, sand, x, (y ?? Math.max(0.5, h) + 0.1) - 0.15, z, ry);
+        }
+        const k = Math.round(t / 3);
+        if (!b.wild && k % 2 === 0) {
+          const [x, z] = at(t, -0.5), h = Math.max(0.6, w.heightAt(x, z));
+          w.box(0.1, 2, 0.1, '#ffffff', x, h + 1, z);
+          w.cone(1.1, 0.6, ['#ff595e', '#2f7df6', '#ffd23f', '#2fbf4a'][(k / 2 + 8) % 4 | 0], x, h + 1.9, z, { seg: 8, shadow: false });
+          const [lx2, lz2] = at(t + 1, -0.5);
+          w.box(0.8, 0.25, 1.8, '#ffffff', lx2, h + 0.3, lz2, ry + Math.PI / 2);
+        }
+      }
+      const [sx, sz] = at(0, -4);
+      sign(w, b.name, [sx, sz], 4, { bg: b.gold ? '#e8b04a' : '#3d3a38', fg: b.gold ? '#17233b' : '#ffffff', size: 0.9 });
+      if (b.tower) {
+        const [tx2, tz2] = at(b.len * 0.3, -1), th = Math.max(0.6, w.heightAt(tx2, tz2));
+        for (const [dx, dz] of [[-0.6, -0.6], [0.6, -0.6], [-0.6, 0.6], [0.6, 0.6]]) w.box(0.15, 2.4, 0.15, '#ffffff', tx2 + dx, th + 1.2, tz2 + dz);
+        w.box(1.8, 1.2, 1.8, '#e8262b', tx2, th + 3, tz2); w.box(2, 0.2, 2, '#ffd23f', tx2, th + 3.7, tz2);
+      }
+      if (b.volley) {
+        const [vx, vz] = at(-b.len * 0.3, -1), vh = Math.max(0.6, w.heightAt(vx, vz));
+        for (const s2 of [-1, 1]) w.box(0.12, 2.4, 0.12, '#ffffff', vx + b.ux * s2 * 3, vh + 1.2, vz + b.uz * s2 * 3);
+        w.box(0.05, 0.8, 6, '#f2f2f2', vx, vh + 2, vz, ry);
+      }
+      if (b.surf) for (let i = 0; i < 3; i++) { const [x, z] = at(-3 + i * 3, 9 + i * 2); w.box(0.6, 0.1, 2.2, ['#ff595e', '#4cc9f0', '#ffd23f'][i], x, 0.05, z, ry + 0.4); w.box(0.06, 2.4, 0.06, '#ffffff', x, 1.25, z); w.box(0.05, 1.8, 1.2, ['#ff595e', '#4cc9f0', '#ffd23f'][i], x, 1.5, z + 0.6, ry + 0.4); }
+      if (b.garden) for (let i = 0; i < 6; i++) { const [x, z] = at(-b.len / 2 + i * b.len / 5, -6); palm(w, x, z); }
+      // Tiere am Strand
+      const [gx3, gz3] = at(0, 0);
+      w.animal('bird', { pos: new THREE.Vector3(gx3, 0, gz3), behavior: 'walk', radius: 3, speed: 0.9, colors: ['#ffffff', '#e6e8ea', '#9aa1ab'], scale: 0.7 });
+      w.animal('bird', { pos: new THREE.Vector3(gx3, 0, gz3), y: 7 + (b.len % 3), behavior: 'fly', radius: 8, speed: 4, colors: ['#ffffff', '#e6e8ea', '#9aa1ab'], scale: 0.7 });
+      if (!b.gold) { const [cx2, cz2] = at(b.len * 0.4, -0.5); w.animal('crab', { pos: new THREE.Vector3(cx2, 0, cz2), radius: 1.5, speed: 0.5, hungry: b.name === 'Playa Jardín' }); }
+      if (b.turtles) for (let i = 0; i < 4; i++) { const [x, z] = at(-4 + i * 3, 8 + (i % 2) * 3); w.animal('turtle', { pos: new THREE.Vector3(x, -0.9, z), y: -0.9, behavior: 'swim', radius: 4, speed: 0.5, hungry: i === 1 }); }
+    }
+    sign(w, 'El Puertito: hier schwimmen Meeresschildkröten!', (() => { const b = BEACHES.find((q) => q.turtles); return [b.x - b.nx * 6, b.z - b.nz * 6]; })(), 5.5, { bg: '#2fa84f', size: 0.8 });
+    w.animal('dog', { pos: new THREE.Vector3(BEACHES[3].x, 0, BEACHES[3].z), radius: 5, speed: 2.2, hungry: true });
+
+    // ---------- Noch mehr Tiere ----------
+    const A = (kind, [x, z], o = {}) => w.animal(kind, { pos: new THREE.Vector3(x, 0, z), ...o });
+    const near = ([x, z], r) => [x + w.r(-r, r), z + w.r(-r, r)];
+    // Papageienpark: Seelöwen, Flamingos
+    const [lpx3, lpz3] = P.loro, lpy3 = w.heightAt(lpx3, lpz3);
+    w.water(lpx3 - 4, lpz3 + 4, 4, 3, { top: lpy3 + 0.1, color: '#4fc0f0' });
+    for (let i = 0; i < 2; i++) A('seal', [lpx3 - 4 + i, lpz3 + 4], { y: lpy3 + 0.05, radius: 1.2, speed: 0.6, hungry: i === 0 });
+    for (let i = 0; i < 4; i++) A('flamingo', [lpx3 + 4 + i * 0.8, lpz3 - 3], { radius: 1.5, speed: 0.5 });
+    // Delfine und Grindwale vor der Südwestküste
+    for (const [lo, la] of [[-16.75, 28.06], [-16.80, 28.10], [-16.70, 28.02], [-16.86, 28.17]]) {
+      const [x, z] = geo(lo, la);
+      A('dolphin', [x, z], { y: -0.8, behavior: 'jump', radius: 7 });
+      A('dolphin', [x + 4, z + 3], { y: -0.8, behavior: 'jump', radius: 6 });
+    }
+    for (const [lo, la] of [[-16.82, 28.12], [-16.88, 28.20]]) A('whale', geo(lo, la), { y: -1.6, behavior: 'jump', radius: 10 });
+    // Las Cañadas: Wildkaninchen, Eidechsen, Turmfalken
+    for (let i = 0; i < 4; i++) A('rabbit', near(P.caldera, 25), { behavior: 'hop', radius: 6, speed: 2, color: '#a08a6a', hungry: i === 0 });
+    for (let i = 0; i < 4; i++) A('lizard', near(P.caldera, 25), { radius: 3, speed: 1.2 });
+    for (let i = 0; i < 2; i++) { const [x, z] = near(P.caldera, 20); A('bird', [x, z], { y: 30 + i * 3, behavior: 'fly', radius: 14, speed: 4, colors: ['#a0612a', '#d9a441', '#5a3a1a'], scale: 0.8 }); }
+    // Teidefinken (blau) im Kiefernwald bei Vilaflor
+    for (let i = 0; i < 3; i++) { const [x, z] = near(P.vilaflor, 10); A('bird', [x, z], { y: w.heightAt(x, z) + 3 + i, behavior: 'flutter', radius: 5, colors: ['#5b8fd6', '#3d5a80', '#9fc4f0'], scale: 0.55 }); }
+    // Teno und Anaga: Ziegenherden, Bauernhof mit Hühnern, Schmetterlinge im Lorbeerwald
+    for (let i = 0; i < 5; i++) A('goat', near(P.buenavista, 10), { radius: 5, speed: 0.8, hungry: i === 2 });
+    for (let i = 0; i < 4; i++) A('goat', near(P.taganana, 8), { radius: 5, speed: 0.8 });
+    for (let i = 0; i < 4; i++) A('chicken', near([P.buenavista[0] + 6, P.buenavista[1] - 6], 3), { radius: 3, speed: 1, hungry: i === 0 });
+    for (let i = 0; i < 6; i++) { const [x, z] = near(P.cruzCarmen, 8); A('butterfly', [x, z], { y: w.heightAt(x, z) + 1.4, behavior: 'flutter', radius: 4, color: w.pick(['#ffd23f', '#ff8a1f', '#5fb0ff']) }); }
+    for (let i = 0; i < 5; i++) { const [x, z] = near(P.orotava, 8); A('butterfly', [x, z], { y: w.heightAt(x, z) + 1.4, behavior: 'flutter', radius: 4, color: w.pick(['#ff5fb0', '#ffd23f', '#b07bff']) }); }
+    for (let i = 0; i < 4; i++) { const [x, z] = near(P.vilaflor, 8); A('bee', [x, z], { y: w.heightAt(x, z) + 1, behavior: 'flutter', radius: 3 }); }
+    // Katzen und Hunde in den Orten, Kanarienvögel, Fische im Naturbecken
+    for (const [k, c] of [['garachico', '#f08a1f'], ['icod', '#ffffff'], ['orotava', '#3a3a3a'], ['candelaria', '#d9cbb0'], ['adeje', '#f08a1f'], ['tacoronte', '#3a3a3a']]) A('cat', near(P[k], 4), { radius: 3, speed: 0.9, color: c });
+    for (const k of ['icod', 'sanIsidro', 'guia']) A('dog', near(P[k], 4), { radius: 4, speed: 2 });
+    for (const k of ['garachico', 'realejos', 'tegueste']) { const [x, z] = near(P[k], 4); A('bird', [x, z], { y: w.heightAt(x, z) + 4, behavior: 'flutter', radius: 4, colors: ['#ffe14d', '#f2c200', '#ffd23f'], scale: 0.55 }); }
+    for (let i = 0; i < 4; i++) A('fish', [P.rambla[0] + w.r(-2, 2), P.rambla[1] - 4 + w.r(-1, 1)], { y: 0.05, behavior: 'swim', radius: 1.5, speed: 0.6, color: w.pick(['#ffd23f', '#4cc9f0', '#ff595e']) });
+
     // Tiere: Kanarienvögel, Eidechsen, Katzen, Hasen, Schildkröten
     for (let i = 0; i < 3; i++) w.animal('bird', { pos: new THREE.Vector3(P.orotava[0] + i * 4, 0, P.orotava[1]), y: 9 + i, behavior: 'flutter', radius: 6, colors: ['#ffe14d', '#f2c200', '#ffd23f'], scale: 0.55 });
     w.box(0.2, 1.6, 0.2, '#7a4a2a', P.puerto[0] + 3, w.heightAt(P.puerto[0] + 3, P.puerto[1]) + 0.8, P.puerto[1]);
@@ -1033,5 +1141,9 @@ export const tenerife = {
 
     // Münzen rund um die Ankunft
     w.coinRing(ax, ay, az - 18, 5, 8);
+
+    // Jedes Tier zu wenigen Meshes zusammenfassen (Beine/Flügel bleiben beweglich) – spart viele Draw-Calls
+    for (const a of w.animals) compact(a.g);
+    compact(camel);
   },
 };

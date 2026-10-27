@@ -37,6 +37,8 @@ Aufträge: Fahrgäste bringen, Pizza liefern, Rennen fahren, Raser stoppen – g
 Teno, Masca, über 35 Orte von Santa Cruz bis Los Gigantes, Straßen mit Linienbus und viele Ausflugsziele –
 Kaktusfarm, Affenpark, Goldstrand Las Teresitas, Wasserpark und Einkaufszentrum im Thai-Stil,
 Palmetum, Hafen und Agatha-Christie-Treppe in Puerto de la Cruz, Walskelett in Los Gigantes.
+Dazu 16 Strände (goldener und schwarzer Sand) und über 160 Tiere: Möwen, Krabben, Meeresschildkröten in
+El Puertito, Delfine, Grindwale, Ziegen, Kaninchen, Turmfalken, Teidefinken, Schmetterlinge, Seelöwen u. v. m.
 
 In den Welten gibt es umzäunte Bereiche, deren **Tor sich nur nach einer gelösten Aufgabe** öffnet,
 Fahrgeschäfte mit **Fahrkarten-Aufgabe** und viele Tiere: Papageien, Flamingos, Pinguine, Delfine,
