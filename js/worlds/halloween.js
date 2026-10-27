@@ -86,7 +86,7 @@ export const halloween = {
 
     // ---------------- Mond und Himmel ----------------
     const moon = new THREE.Mesh(new THREE.SphereGeometry(18, 24, 16), new THREE.MeshBasicMaterial({ color: '#fff3c4', fog: false }));
-    moon.position.set(26, 46, -175);
+    moon.position.set(46, 34, -175);
     w.add(moon);
     const halo = new THREE.Mesh(new THREE.SphereGeometry(24, 24, 16), new THREE.MeshBasicMaterial({ color: '#ffe7a0', transparent: true, opacity: 0.18, fog: false, depthWrite: false }));
     halo.position.copy(moon.position);
@@ -117,7 +117,7 @@ export const halloween = {
     w.path(0, 8, 30, 8, 2.6, PATH);
     w.path(30, 8, 28, 4, 2.6, PATH);
     w.path(-14, 30, -26, 33, 2.6, PATH);
-    for (let z = 44; z >= -10; z -= 6) for (const s of [-1, 1]) pumpkin(s * 2.6, z + (s > 0 ? 3 : 0), w.r(0.6, 0.9), s > 0 ? -Math.PI / 2 : Math.PI / 2);
+    for (let z = 44; z >= -10; z -= 6) for (const s of [-1, 1]) pumpkin(s * 2.6, z + (s > 0 ? 3 : 0), w.r(0.6, 0.9), -s * 0.7);
     for (const z of [36, 24, 12, 0]) { lantern(-3.6, z); lantern(3.6, z - 0.01); }
     w.coinLine(0, 30, 0, -10, 6);
 
@@ -176,7 +176,7 @@ export const halloween = {
     K.solid(6.55, 5.0, -28.35, 4.3, 0.5, 2.7, '#6b5a7e');
     w.coin(6.55, 5, -28.35);
     // schwebende Plattformen (Bücherregale, Kronleuchter)
-    const plats = [[2.6, 6.0, -28.6], [-0.8, 7.0, -27.2], [-4.3, 8.0, -28.4]];
+    const plats = [[2.6, 6.0, -28.6], [-0.8, 7.0, -27.8], [-4.3, 8.0, -28.4]];
     plats.forEach(([x, top, z], i) => {
       K.solid(x, top, z, 2.2, 0.5, 2.2, ['#8a5e33', '#b05fd0', '#8a5e33'][i]);
       B(0.08, WALL - top, 0.08, '#c8ccd2', x, top + (WALL - top) / 2, z);
@@ -380,6 +380,9 @@ export const halloween = {
     w.coinLine(-12, 22, -40, 22, 5);
     w.coinLine(14, 8, 26, 8, 3);
     w.coinLine(-2, -40, 2, -48, 3);
+    w.coinLine(4, 47, 8, 52, 3);
+    w.coinLine(20, -30, 20, -50, 4);
+    w.coinLine(-20, -30, -40, -46, 4);
 
     // ---------------- Tiere ----------------
     for (let i = 0; i < 4; i++) w.animal('bat', { pos: new THREE.Vector3(-11, 0, -18), y: 18 + i * 2, behavior: 'fly', radius: 6 + i * 2, speed: (i % 2 ? -1 : 1) * 4, scale: 1.4 });
@@ -392,7 +395,7 @@ export const halloween = {
     w.animal('cat', { pos: new THREE.Vector3(-41.5, 0, 48.6), behavior: 'perch', color: '#1d1a22' });
     w.animal('cat', { pos: new THREE.Vector3(30, 0, 40), radius: 4, speed: 1, color: '#1d1a22' });
     w.animal('spider', { pos: new THREE.Vector3(6, 0, 18), radius: 3, speed: 0.8, scale: 1.2, hungry: true });
-    w.animal('spider', { pos: new THREE.Vector3(-20, 0, 34), radius: 3, speed: 0.8, scale: 1.2 });
+    w.animal('spider', { pos: new THREE.Vector3(-20, 0, 34), radius: 3, speed: 0.8, scale: 1.2, hungry: true });
     w.animal('spider', { pos: new THREE.Vector3(44, 0, 0), radius: 3, speed: 0.8 });
     const raven = ['#1d1a22', '#2b2233', '#111111'];
     w.animal('bird', { pos: new THREE.Vector3(14, 1.6, 2), behavior: 'perch', colors: raven, hungry: true });
@@ -403,7 +406,7 @@ export const halloween = {
     w.add(meshOf(pumpkinBody, 'lambert', { emissive: '#7a2a00' }));
     w.add(meshOf(pumpkinFace, 'basic'));
     w.add(meshOf(glow, 'basic'));
-    const fogMesh = meshOf(fogList, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.16, depthWrite: false }));
+    const fogMesh = meshOf(fogList, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.1, depthWrite: false }));
     w.add(fogMesh);
     w.updaters.push((dt, t) => { fogMesh.position.x = Math.sin(t * 0.15) * 1.5; fogMesh.position.z = Math.cos(t * 0.12) * 1.2; });
     K.flush();
