@@ -6,7 +6,7 @@ import { plainMat } from './blocks.js';
 const UNIT = new THREE.BoxGeometry(1, 1, 1);
 UNIT.userData.shared = true;
 
-function part(parent, w, h, d, color, x, y, z, emissive) {
+export function part(parent, w, h, d, color, x, y, z, emissive) {
   const m = new THREE.Mesh(UNIT, plainMat(color, emissive));
   m.scale.set(w, h, d);
   m.position.set(x, y, z);
@@ -15,7 +15,7 @@ function part(parent, w, h, d, color, x, y, z, emissive) {
   return m;
 }
 
-function seatAt(parent, x, y, z) {
+export function seatAt(parent, x, y, z) {
   const s = new THREE.Object3D();
   s.position.set(x, y, z);
   parent.add(s);
@@ -281,6 +281,43 @@ export function boatTour(w, { cx, cz, rx, rz, y = -0.75, name = 'Bootstour', sta
     name, starId, station, exit, duration, seat,
     update(dt, t, riding, rt) {
       placeAt(Math.PI + (riding ? (rt / duration) * Math.PI * 2 : 0) + (riding ? 0 : Math.sin(t) * 0.01));
+    },
+  };
+}
+
+// ---------- Allgemeine Fahrt entlang eines Pfads ----------
+/**
+ * Ein Fahrzeug (THREE.Group, Front = +z) fährt einen Pfad ab. Einmal pro Fahrt (geschlossener Pfad: eine Runde).
+ * points: [[x, y, z], …]; ground: true = y aus dem Gelände + y-Wert als Abstand; idle: 'loop' | 'wait'
+ * seat: [x, y, z] Sitzposition im Fahrzeug (Füße), flat: Fahrzeug nicht nach oben/unten neigen
+ * animate(vehicle, t, riding): optionale Zusatzanimation (Rotoren, Flügel …)
+ */
+export function pathRide(w, { points, closed = true, duration = 18, vehicle, seat = [0, 0, 0], name, starId, station, exit, ground = false, idle = 'loop', flat = false, camera, animate, bank = 0 }) {
+  const pts = points.map(([x, y, z]) => new THREE.Vector3(x, ground ? w.heightAt(x, z) + y : y, z));
+  const curve = new THREE.CatmullRomCurve3(pts, closed, 'catmullrom', 0.5);
+  w.add(vehicle);
+  const seatObj = seatAt(vehicle, ...seat);
+  const tmp = new THREE.Vector3(), tan = new THREE.Vector3();
+  const place = (u) => {
+    u = Math.min(Math.max(u, 0), closed ? 0.99999 : 1);
+    const p = curve.getPointAt(u);
+    if (ground) p.y = Math.max(p.y, w.heightAt(p.x, p.z) + points[0][1]);
+    vehicle.position.copy(p);
+    curve.getTangentAt(u, tan);
+    if (flat) tan.y = 0;
+    vehicle.lookAt(tmp.copy(p).add(tan));
+    if (bank) vehicle.rotateZ(bank);
+  };
+  place(0);
+  return {
+    name, starId, station, exit, duration, seat: seatObj, camera,
+    update(dt, t, riding, rt) {
+      let u;
+      if (riding) u = rt / duration;
+      else if (idle === 'loop') { const c = t % (duration + 6); u = c < 6 ? 0 : (c - 6) / duration; }
+      else u = 0;
+      place(closed ? u % 1 : u);
+      if (animate) animate(vehicle, t, riding);
     },
   };
 }

@@ -4,6 +4,10 @@ import * as THREE from '../vendor/three.module.min.js';
 import { blockMat, blockGeometry, textSprite, disposeTree, studTexture } from './blocks.js';
 import { makeAnimal, updateAnimal, heartBurst } from './animals.js';
 import { seededRng } from './math.js';
+import { makeCar, missionMarker } from './driving.js';
+
+// Portale zurück zu einer Insel (Hub) sind frei, alle anderen verlangen eine Eintrittskarte
+const WORLD_FREE = (target, def) => target === 'hub' || (target === 'worldtour' && !def.isHub);
 
 const UNIT = new THREE.BoxGeometry(1, 1, 1);
 UNIT.userData.shared = true;
@@ -16,6 +20,8 @@ const SIDES = {
 };
 // Blickrichtung (rotation.y), mit der man von außen auf eine Seite zuläuft
 export const FACING = { s: Math.PI, n: 0, e: -Math.PI / 2, w: Math.PI / 2 };
+// Richtung, in die eine Seite zeigt (als rotation.y-Winkel)
+const FACING_ANGLE = { s: 0, n: Math.PI, e: Math.PI / 2, w: -Math.PI / 2 };
 
 function aabb(cx, y0, cz, hx, h, hz) {
   return { min: new THREE.Vector3(cx - hx, y0, cz - hz), max: new THREE.Vector3(cx + hx, y0 + h, cz + hz) };
@@ -85,6 +91,8 @@ export class World {
     this.portals = [];
     this.animals = [];
     this.rides = [];
+    this.cars = [];
+    this.missions = [];
     this.updaters = [];
     this.particles = [];
     this.finish = null;
@@ -99,6 +107,9 @@ export class World {
     this.starGeo = starGeometry();
     def.build(this, ctx);
     this.flushDeco();
+    if (def.killY !== undefined) this.killY = def.killY;
+    // Welt-Ausgänge brauchen keine Aufgabe
+    for (const p of this.portals) p.free = !!WORLD_FREE(p.target, def);
   }
 
   r(a, b) { return a + this.rng() * (b - a); }
@@ -300,7 +311,12 @@ export class World {
   }
 
   animal(kind, o) {
+    if (this.terr && o.pos && o.y === undefined && !['fly', 'flutter', 'jump', 'swim'].includes(o.behavior)) {
+      o.pos.y = this.heightAt(o.pos.x, o.pos.z);
+      o.onGround = true;
+    }
     const a = makeAnimal(kind, o);
+    a.onGround = !!o.onGround;
     this.root.add(a.g);
     this.animals.push(a);
     return a;
@@ -367,38 +383,212 @@ export class World {
     return g;
   }
 
-  // Portal (Torbogen mit Strudel). facing = Seite, von der man hineinläuft
-  portal({ x, z, y = 0, facing = 's', label, color = '#7a5cff', target, sub }) {
-    const n = SIDES[facing], alongX = facing === 'n' || facing === 's';
+  // Portal (Torbogen mit Strudel). Die Vorderseite zeigt in Richtung `angle` (oder Seite `facing`).
+  portal({ x, z, y, facing = 's', angle, label, color = '#7a5cff', target, sub }) {
+    const a = angle ?? FACING_ANGLE[facing];
+    y ??= this.heightAt(x, z);
+    const n = new THREE.Vector3(Math.sin(a), 0, Math.cos(a));
+    const t = new THREE.Vector3(Math.cos(a), 0, -Math.sin(a));
     const W = 3.6, H = 4.8;
     for (const s of [-1, 1]) {
-      const px = alongX ? x + s * (W / 2 + 0.5) : x, pz = alongX ? z : z + s * (W / 2 + 0.5);
-      this.block(px, y + H, pz, 1, H, 1, color);
+      const px = x + t.x * s * (W / 2 + 0.5), pz = z + t.z * s * (W / 2 + 0.5);
+      this.solids.push(aabb(px, y, pz, 0.5, H, 0.5));
+      this.box(1, H, 1, color, px, y + H / 2, pz, a);
     }
-    this.block(x, y + H + 1, z, alongX ? W + 2 : 1, 1, alongX ? 1 : W + 2, color);
+    this.box(W + 2, 1, 1, color, x, y + H + 0.5, z, a);
     const disc = new THREE.Mesh(new THREE.CircleGeometry(1.8, 32), new THREE.MeshBasicMaterial({ map: swirlTexture(), transparent: true, opacity: 0.9, side: THREE.DoubleSide, color }));
     disc.scale.y = H / 3.6;
     disc.position.set(x, y + H / 2, z);
-    disc.rotation.y = alongX ? 0 : Math.PI / 2;
+    disc.rotation.y = a;
     this.root.add(disc);
     const sign = textSprite(label, { bg: color, size: 1.1 });
     sign.position.set(x + n.x * 0.8, y + H + 2.6, z + n.z * 0.8);
     this.root.add(sign);
-    let subSign = null;
     if (sub) {
-      subSign = textSprite(sub, { bg: '#ffffff', fg: '#17233b', size: 0.75 });
+      const subSign = textSprite(sub, { bg: '#ffffff', fg: '#17233b', size: 0.75 });
       subSign.position.set(x + n.x * 0.8, y + H + 1.55, z + n.z * 0.8);
       this.root.add(subSign);
     }
+    const front = new THREE.Vector3(x + n.x * 12, 0, z + n.z * 12);
+    front.y = Math.max(y, this.heightAt(front.x, front.z));
     const p = {
-      label, target, disc,
-      trigger: aabb(x, y, z, alongX ? W / 2 : 0.6, H, alongX ? 0.6 : W / 2),
-      outside: new THREE.Vector3(x + n.x * 3, y, z + n.z * 3),
-      front: new THREE.Vector3(x + n.x * 12, y, z + n.z * 12),
-      facing,
+      label, target, disc, angle: a,
+      center: new THREE.Vector3(x, y, z), normal: n, tangent: t, width: W, height: H,
+      front,
     };
     this.portals.push(p);
     return p;
+  }
+
+  // Steht der Spieler im Portal-Durchgang?
+  portalHit(p, pos) {
+    const dx = pos.x - p.center.x, dz = pos.z - p.center.z;
+    const along = Math.abs(dx * p.normal.x + dz * p.normal.z), side = Math.abs(dx * p.tangent.x + dz * p.tangent.z);
+    return along < 0.9 && side < p.width / 2 && pos.y > p.center.y - 1 && pos.y < p.center.y + p.height;
+  }
+
+  // ---------- Gelände (Höhenkarte aus Säulen) ----------
+
+  /**
+   * Gelände aus quadratischen Säulen, deren Höhe in `step`-Stufen gerundet wird.
+   * height(x, z) liefert die Höhe in Einheiten (≤ 0 = Meer), color(x, z, h) die Farbe.
+   */
+  terrain({ x0, z0, cols, rows, cell = 2, step = 0.5, height, color, side = 0.82, seaFloor = -6 }) {
+    const hs = new Float32Array(cols * rows);
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+      const x = x0 + (i + 0.5) * cell, z = z0 + (j + 0.5) * cell;
+      const h = height(x, z);
+      hs[j * cols + i] = h <= 0 ? seaFloor : Math.max(step, Math.round(h / step) * step);
+    }
+    this.terr = { x0, z0, cols, rows, cell, hs };
+    const H = (i, j) => (i < 0 || j < 0 || i >= cols || j >= rows ? seaFloor : hs[j * cols + i]);
+    const pos = [], nor = [], col = [];
+    const c = new THREE.Color(), cs = new THREE.Color();
+    const quad = (p, n, cc) => {
+      // zwei Dreiecke aus 4 Ecken (gegen den Uhrzeigersinn von außen gesehen)
+      for (const k of [0, 1, 2, 0, 2, 3]) { pos.push(...p[k]); nor.push(...n); col.push(cc.r, cc.g, cc.b); }
+    };
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+      const h = hs[j * cols + i];
+      if (h <= seaFloor) continue;
+      const xa = x0 + i * cell, xb = xa + cell, za = z0 + j * cell, zb = za + cell;
+      c.set(color(xa + cell / 2, za + cell / 2, h));
+      quad([[xa, h, za], [xa, h, zb], [xb, h, zb], [xb, h, za]], [0, 1, 0], c);
+      cs.copy(c).multiplyScalar(side);
+      const lo = (hn) => Math.max(hn, seaFloor);
+      let hn = H(i + 1, j); if (hn < h) quad([[xb, h, za], [xb, h, zb], [xb, lo(hn), zb], [xb, lo(hn), za]], [1, 0, 0], cs);
+      hn = H(i - 1, j); if (hn < h) quad([[xa, h, zb], [xa, h, za], [xa, lo(hn), za], [xa, lo(hn), zb]], [-1, 0, 0], cs);
+      hn = H(i, j + 1); if (hn < h) quad([[xb, h, zb], [xa, h, zb], [xa, lo(hn), zb], [xb, lo(hn), zb]], [0, 0, 1], cs);
+      hn = H(i, j - 1); if (hn < h) quad([[xa, h, za], [xb, h, za], [xb, lo(hn), za], [xa, lo(hn), za]], [0, 0, -1], cs);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    geo.computeBoundingSphere();
+    const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
+    mesh.receiveShadow = true;
+    mesh.castShadow = true;
+    this.root.add(mesh);
+    this.terrainMesh = mesh;
+    return this.terr;
+  }
+
+  // Geländehöhe an einer Stelle (ohne Gelände: 0 = flache Insel)
+  heightAt(x, z) {
+    const t = this.terr;
+    if (!t) return 0;
+    const i = Math.floor((x - t.x0) / t.cell), j = Math.floor((z - t.z0) / t.cell);
+    if (i < 0 || j < 0 || i >= t.cols || j >= t.rows) return -6;
+    return t.hs[j * t.cols + i];
+  }
+
+  // ---------- weitere Formen ----------
+
+  // Mesh aus beliebiger Geometrie (z. B. Kegel, Kugel); solid = Kollisionskasten in Größe sx/sy/sz
+  shape(geo, color, x, y, z, o = {}) {
+    const m = new THREE.Mesh(geo, o.mat || new THREE.MeshLambertMaterial({ color, emissive: o.emissive || '#000000', transparent: !!o.opacity, opacity: o.opacity ?? 1 }));
+    m.position.set(x, y, z);
+    if (o.ry) m.rotation.y = o.ry;
+    if (o.rx) m.rotation.x = o.rx;
+    if (o.rz) m.rotation.z = o.rz;
+    if (o.scale) m.scale.set(...o.scale);
+    m.castShadow = o.shadow !== false;
+    m.receiveShadow = true;
+    this.root.add(m);
+    if (o.solid) this.solids.push(aabb(x, o.solid[3] ?? y - o.solid[1] / 2, z, o.solid[0] / 2, o.solid[1], o.solid[2] / 2));
+    return m;
+  }
+  cone(r, h, color, x, y, z, o = {}) { return this.shape(new THREE.ConeGeometry(r, h, o.seg || 12), color, x, y + h / 2, z, o); }
+  cyl(rt, rb, h, color, x, y, z, o = {}) { return this.shape(new THREE.CylinderGeometry(rt, rb, h, o.seg || 16), color, x, y + h / 2, z, o); }
+  sphere(r, color, x, y, z, o = {}) { return this.shape(new THREE.SphereGeometry(r, o.seg || 16, Math.max(6, (o.seg || 16) >> 1), 0, Math.PI * 2, 0, o.half ? Math.PI / 2 : Math.PI), color, x, y, z, o); }
+
+  // Haus: fester Körper, Fenster/Tür als Deko, Flach- oder Satteldach. door = Seite der Tür
+  house(x, z, w, d, h, o = {}) {
+    const y = o.y ?? this.heightAt(x, z);
+    const wall = o.wall || '#f4efe6';
+    this.block(x, y + h, z, w, h, d, wall, { plain: !o.studs, safe: true });
+    const win = o.window || '#7cc4ff', door = o.doorColor || '#7a4a2a', side = o.door || 's';
+    const floors = Math.max(1, Math.floor(h / 3));
+    for (let f = 0; f < floors; f++) {
+      const wy = y + 1.7 + f * 3;
+      for (const [nx, nz, len] of [[0, 1, w], [0, -1, w], [1, 0, d], [-1, 0, d]]) {
+        const cnt = Math.max(1, Math.floor(len / 2.6));
+        for (let k = 0; k < cnt; k++) {
+          const u = -len / 2 + (k + 0.5) * (len / cnt);
+          if (f === 0 && k === Math.floor(cnt / 2) && ((side === 's' && nz === 1) || (side === 'n' && nz === -1) || (side === 'e' && nx === 1) || (side === 'w' && nx === -1))) continue;
+          const px = nz ? x + u : x + nx * (w / 2 + 0.03), pz = nz ? z + nz * (d / 2 + 0.03) : z + u;
+          this.box(nz ? 0.9 : 0.06, 1.1, nz ? 0.06 : 0.9, win, px, wy, pz);
+          if (o.shutters) this.box(nz ? 1.5 : 0.07, 1.2, nz ? 0.07 : 1.5, o.shutters, px - (nz ? 0 : 0), wy, pz);
+          if (o.balcony && f > 0) this.box(nz ? 1.6 : 0.5, 0.15, nz ? 0.5 : 1.6, o.balcony, px + nx * 0.25, wy - 0.7, pz + nz * 0.25);
+        }
+      }
+    }
+    const dn = SIDES[side];
+    this.box(dn.z ? 1.2 : 0.07, 2.1, dn.z ? 0.07 : 1.2, door, x + dn.x * (w / 2 + 0.04), y + 1.05, z + dn.z * (d / 2 + 0.04));
+    if (o.roof === 'gable') {
+      const rc = o.roofColor || '#c0392b', along = w >= d;
+      const span = along ? d : w, len = (along ? w : d) + 0.6, rh = span * 0.35;
+      const slope = Math.atan2(rh, span / 2), sl = Math.hypot(rh, span / 2) + 0.3;
+      for (const s of [-1, 1]) {
+        if (along) this.box(len, 0.25, sl, rc, x, y + h + rh / 2, z + s * span / 4, 0, s * slope);
+        else this.box(sl, 0.25, len, rc, x + s * span / 4, y + h + rh / 2, z, 0, 0, -s * slope);
+      }
+    } else if (o.roof !== 'none') {
+      this.box(w + 0.3, 0.3, d + 0.3, o.roofColor || '#d9d2c3', x, y + h + 0.15, z);
+    }
+    return y + h;
+  }
+
+  // Wendeltreppe aus Plattformen um eine Säule; Stern oben. Gibt die Höhe der Gipfelplattform zurück.
+  spiralTower({ x, z, y = 0, r = 5, n = 14, rise = 1.1, size = 2.5, a0 = Math.PI / 2, da = 0.72, colors = ['#ffd1e4', '#cfe8ff'], column = '#f4eef8', colW = 3, top = '#ffd1e4', topSize = 6, starId, label }) {
+    for (let i = 0; i < n; i++) {
+      const a = a0 + i * da, t = y + rise * (i + 1);
+      this.block(x + Math.cos(a) * r, t, z + Math.sin(a) * r, size, 0.6, size, colors[i % colors.length]);
+      if (i % 4 === 1) this.coin(x + Math.cos(a) * r, t, z + Math.sin(a) * r);
+    }
+    const peak = y + rise * (n + 1) + 0.1;
+    this.block(x, peak - 0.6, z, colW, peak - 0.6 - y, colW, column);
+    this.block(x, peak, z, topSize, 0.6, topSize, top);
+    if (starId) this.star(starId, x, peak, z, label);
+    return peak;
+  }
+
+  // Labyrinth mit Tor auf der Westseite (Zeile row). Stern in der am weitesten entfernten Zelle.
+  maze({ x0, z0, C = 7, S = 3.4, H = 3.8, color = '#2f8a3c', mat, label = 'Irrgarten', starId, starLabel, y = 0, row = 3 }) {
+    const cells = Array.from({ length: C * C }, () => ({ e: true, s: true, seen: false }));
+    const at = (i, j) => cells[j * C + i];
+    const stack = [[0, row]];
+    at(0, row).seen = true;
+    const dist = new Map([[`0,${row}`, 0]]);
+    let far = [0, row], farD = 0;
+    while (stack.length) {
+      const [i, j] = stack[stack.length - 1];
+      const nb = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([di, dj]) => [i + di, j + dj]).filter(([a, b]) => a >= 0 && b >= 0 && a < C && b < C && !at(a, b).seen);
+      if (!nb.length) { stack.pop(); continue; }
+      const [a, b] = nb[Math.floor(this.rng() * nb.length)];
+      if (a > i) at(i, j).e = false; else if (a < i) at(a, b).e = false; else if (b > j) at(i, j).s = false; else at(a, b).s = false;
+      at(a, b).seen = true;
+      const dd = dist.get(`${i},${j}`) + 1;
+      dist.set(`${a},${b}`, dd);
+      if (dd > farD) { farD = dd; far = [a, b]; }
+      stack.push([a, b]);
+    }
+    const o = { mat };
+    for (let j = 0; j < C; j++) for (let i = 0; i < C; i++) {
+      const c = at(i, j), cx = x0 + i * S, cz = z0 + j * S;
+      if (c.e && i < C - 1) this.block(cx + S, y + H, cz + S / 2, 0.7, H, S + 0.7, color, o);
+      if (c.s && j < C - 1) this.block(cx + S / 2, y + H, cz + S, S + 0.7, H, 0.7, color, o);
+    }
+    this.block(x0 + C * S / 2, y + H, z0, C * S + 0.7, H, 0.7, color, o);
+    this.block(x0 + C * S / 2, y + H, z0 + C * S, C * S + 0.7, H, 0.7, color, o);
+    this.block(x0 + C * S, y + H, z0 + C * S / 2, 0.7, H, C * S + 0.7, color, o);
+    if (row > 0) this.block(x0, y + H, z0 + row * S / 2, 0.7, H, row * S + 0.7, color, o);
+    if (row < C - 1) this.block(x0, y + H, z0 + (row + 1 + C) * S / 2, 0.7, H, (C - row - 1) * S + 0.7, color, o);
+    this.block(x0, y + H, z0 + (row + 0.5) * S, 0.7, H - 3.4, S - 0.7, color, o);
+    const g = this.gateAt(new THREE.Vector3(x0, y, z0 + (row + 0.5) * S), 'w', label, 2.6, 3.4);
+    if (starId) this.star(starId, x0 + (far[0] + 0.5) * S, y, z0 + (far[1] + 0.5) * S, starLabel || label);
+    return g;
   }
 
   // Einstiegsplatte eines Fahrgeschäfts
@@ -412,6 +602,64 @@ export class World {
     t.position.set(x, y + 2.3, z);
     this.root.add(t);
     return aabb(x, y, z, 1.7, 2, 1.7);
+  }
+
+  // Fahrbares Auto (kind: taxi, police, pizza, sport, monster). ry = Blickrichtung
+  car({ x, z, y, ry = 0, kind = 'taxi', color }) {
+    y ??= this.heightAt(x, z);
+    const c = makeCar(kind, color);
+    c.group.position.set(x, y, z);
+    c.group.rotation.y = ry;
+    this.root.add(c.group);
+    c.home = { pos: new THREE.Vector3(x, y, z), ry };
+    c.heading = ry;
+    c.speed = 0;
+    this.cars.push(c);
+    return c;
+  }
+
+  /**
+   * Auftrag. type: taxi | pizza | race | police. start: [x, z]
+   * stages: [{ at: [x, z], text, person }] (bei police: path: [[x, z], …], speed)
+   * time: Sekunden, reward: Münzen, car: benötigter Autotyp (optional)
+   */
+  mission(def) {
+    const [x, z] = def.start;
+    const y = this.heightAt(x, z);
+    const colors = { taxi: '#ffc531', pizza: '#ff7a1a', race: '#4cc9f0', police: '#7a9cff' };
+    const marker = missionMarker(def.label, colors[def.type] || '#ffc531');
+    marker.position.set(x, y, z);
+    this.root.add(marker);
+    const m = { ...def, start: new THREE.Vector3(x, y, z), marker };
+    this.missions.push(m);
+    return m;
+  }
+
+  // Kleine Objekte (Schilder, Häuser-Teile, Fahrzeuge …) weit weg nicht zeichnen. Über Layer statt
+  // .visible, damit die Spiel-Logik (offene Tore, eingesammelte Sterne) unberührt bleibt.
+  cullFar(f) {
+    if (!this.cull) {
+      this.cull = [];
+      const box = new THREE.Box3(), sph = new THREE.Sphere();
+      this.root.updateMatrixWorld(true);
+      for (const o of this.root.children) {
+        if (o.isInstancedMesh || o === this.terrainMesh) continue;
+        box.setFromObject(o);
+        if (box.isEmpty()) continue;
+        box.getBoundingSphere(sph);
+        if (sph.radius > 20) continue;
+        const parts = [];
+        o.traverse((c) => { if (c.isMesh || c.isSprite) parts.push(c); });
+        this.cull.push({ o, local: o.worldToLocal(sph.center.clone()), parts, shown: true });
+      }
+    }
+    const d2 = (this.cullDist || 170) ** 2, v = new THREE.Vector3();
+    for (const c of this.cull) {
+      const show = c.o.localToWorld(v.copy(c.local)).distanceToSquared(f) < d2;
+      if (show === c.shown) continue;
+      c.shown = show;
+      for (const m of c.parts) { if (show) m.layers.enable(0); else m.layers.disable(0); }
+    }
   }
 
   addRide(ride) {
@@ -436,7 +684,19 @@ export class World {
         this.updateBounds(s);
       }
     }
-    for (const a of this.animals) updateAnimal(a, dt, time);
+    // Weit entfernte Tiere und Münzen ausblenden (spart Draw-Calls in großen Welten)
+    const f = this.focus, far2 = (this.viewDist || 110) ** 2;
+    for (const a of this.animals) {
+      if (f) {
+        const vis = a.g.position.distanceToSquared(f) < far2;
+        if (!vis) { if (a.g.visible && a.behavior !== 'jump') a.g.visible = false; continue; }
+        if (a.behavior !== 'jump') a.g.visible = true;
+      }
+      if (this.terr && a.onGround) a.y = this.heightAt(a.g.position.x, a.g.position.z);
+      updateAnimal(a, dt, time);
+    }
+    if (f) for (const c of this.coins) if (!c.taken) c.mesh.visible = c.mesh.position.distanceToSquared(f) < far2;
+    if (f) this.cullFar(f);
     for (const c of this.coins) {
       if (c.taken) {
         if (c.mesh.visible) {
@@ -454,6 +714,8 @@ export class World {
       s.mesh.position.y = Math.sin(time * 2) * 0.2;
     }
     for (const p of this.portals) p.disc.rotation.z = -time * 1.5;
+    for (const m of this.missions) m.marker.userData.ring.rotation.z = time;
+    for (const c of this.cars) if (c.body.userData.lights) c.body.userData.lights.forEach((l, i) => { l.visible = Math.floor(time * 4 + i) % 2 === 0; });
     for (const g of this.gates) {
       if (g.opening === undefined) continue;
       g.opening += dt;

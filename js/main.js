@@ -4,6 +4,7 @@ import { Level } from './level.js';
 import { World } from './world.js';
 import { WORLDS, THEME_WORLDS } from './worlds.js';
 import { ANIMAL_NAMES } from './animals.js';
+import { CAR_TYPES, targetBeacon, guideArrow, makePerson, makeCar } from './driving.js';
 import { Avatar, SHOP, DEFAULT_OUTFIT } from './avatar.js';
 import { Input } from './controls.js';
 import { sfx, unlockAudio, setMuted, vibrate } from './audio.js';
@@ -60,7 +61,8 @@ scene.background = skyTex;
 scene.fog = new THREE.Fog('#bfe3ff', 70, 170);
 
 const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 500);
-scene.add(new THREE.HemisphereLight('#ffffff', '#6d8fb0', 1.6));
+const hemi = new THREE.HemisphereLight('#ffffff', '#6d8fb0', 1.6);
+scene.add(hemi);
 const sun = new THREE.DirectionalLight('#fff4e0', 2.2);
 sun.castShadow = true;
 sun.shadow.mapSize.set(1024, 1024);
@@ -88,6 +90,12 @@ function setTheme(t) {
   scene.fog.far = t.fogFar ?? 230;
   sea.material.color.set(t.sea);
   sea.position.y = t.seaY ?? -0.8;
+  const L = t.light || {};
+  hemi.intensity = L.hemi ?? 1.6;
+  hemi.color.set(L.sky || '#ffffff');
+  hemi.groundColor.set(L.ground || '#6d8fb0');
+  sun.intensity = L.sun ?? 2.2;
+  sun.color.set(L.sunColor || '#fff4e0');
 }
 
 const avatar = new Avatar(save.outfit);
@@ -139,7 +147,8 @@ function updateConfetti(dt) {
 }
 
 // ---------- Spieler & Physik ----------
-const SPEED = 7.5, JUMP = 14.5, GRAVITY = 38, R = 0.4, H = 2.3;
+const SPEED = 7.5, JUMP = 14.5, GRAVITY = 38;
+let R = 0.4, H = 2.3; // Spieler-Kollisionsmaß (im Auto größer)
 const player = {
   pos: new THREE.Vector3(),
   vel: new THREE.Vector3(),
@@ -158,6 +167,8 @@ let time = 0;
 let run = null;     // Statistik des laufenden Levels
 let streak = 0;
 let ride = null, rideT = 0;
+let driving = null;  // Auto, in dem der Spieler gerade sitzt
+let mission = null;  // laufender Auftrag
 const cam = { yaw: 0, pitch: 0.38, dist: 10 };
 
 const input = new Input({ canvas, joyZone: $('joy-zone'), joyBase: $('joy-base'), joyKnob: $('joy-knob'), jumpBtn: $('btn-jump') });
@@ -190,7 +201,24 @@ function moveAxis(axis, d, wasGrounded) {
     else if (d < 0) p[axis] = s.max[axis] + R + 1e-3;
     player.vel[axis] = 0;
   }
+  if (stage.terr) {
+    const h = terrainTop();
+    if (axis === 'y') {
+      if (p.y < h) { p.y = h; player.vel.y = Math.max(0, player.vel.y); if (d <= 0) landed = TERRAIN; }
+    } else if (h > p.y + 1e-3) {
+      // Gelände: Stufen bis TERRAIN_STEP hochlaufen, höhere Kanten blockieren
+      if (h - p.y <= (wasGrounded ? TERRAIN_STEP : 0.35)) p.y = h;
+      else { p[axis] -= d; player.vel[axis] = 0; }
+    }
+  }
   return landed;
+}
+
+const TERRAIN = { safe: true, terrain: true };
+const TERRAIN_STEP = 1.55;
+function terrainTop() {
+  const p = player.pos, r = R - 0.05;
+  return Math.max(stage.heightAt(p.x - r, p.z - r), stage.heightAt(p.x + r, p.z - r), stage.heightAt(p.x - r, p.z + r), stage.heightAt(p.x + r, p.z + r));
 }
 
 // Bewegte Plattformen schieben den Spieler aus sich heraus
@@ -220,6 +248,7 @@ function respawn() {
 }
 
 function die() {
+  if (driving) { const c = driving; exitCar(false); resetCar(c); }
   if (run) run.falls++;
   sfx.die();
   vibrate(120);
@@ -257,14 +286,14 @@ function stepPlayer(dt) {
   player.jumpBuffer -= dt;
   player.coyote = player.grounded ? 0.12 : player.coyote - dt;
   if (player.jumpBuffer > 0 && player.coyote > 0) {
-    player.vel.y = JUMP;
+    player.vel.y = stage.jump ?? JUMP;
     player.jumpBuffer = 0;
     player.coyote = 0;
     player.grounded = false;
     player.ground = null;
     sfx.jump();
   }
-  player.vel.y = Math.max(player.vel.y - GRAVITY * dt, -45);
+  player.vel.y = Math.max(player.vel.y - (stage.gravity ?? GRAVITY) * dt, -45);
 
   const wasGrounded = player.grounded;
   const fallSpeed = player.vel.y;
@@ -284,6 +313,233 @@ function stepPlayer(dt) {
     safeTimer = 0.4;
     (player.lastSafe ??= new THREE.Vector3()).copy(player.pos);
   }
+}
+
+// ---------- Autofahren ----------
+function stepCar(dt) {
+  const c = driving, t = c.type;
+  const mv = input.getMove();
+  const throttle = mv.y, steer = mv.x;
+  if (Math.abs(throttle) > 0.05) {
+    const braking = throttle * c.speed < 0;
+    c.speed += throttle * (braking ? 30 : t.acc) * dt;
+  } else c.speed *= 1 - Math.min(1, 1.6 * dt);
+  c.speed = THREE.MathUtils.clamp(c.speed, -t.max * 0.4, t.max);
+  c.heading -= steer * t.turn * dt * THREE.MathUtils.clamp(c.speed / 7, -1, 1);
+  player.vel.x = Math.sin(c.heading) * c.speed;
+  player.vel.z = Math.cos(c.heading) * c.speed;
+  if (input.consumeJump() && player.grounded) { player.vel.y = t.hop || 9; player.grounded = false; sfx.jump(); }
+  player.vel.y = Math.max(player.vel.y - (stage.gravity ?? GRAVITY) * dt, -45);
+  R = 1.1; H = 1.7;
+  const wasGrounded = player.grounded, before = Math.hypot(player.vel.x, player.vel.z);
+  const steps = 4, h = dt / steps;
+  let landed = null;
+  for (let i = 0; i < steps; i++) {
+    moveAxis('x', player.vel.x * h, wasGrounded);
+    moveAxis('z', player.vel.z * h, wasGrounded);
+    landed = moveAxis('y', player.vel.y * h, wasGrounded) || (player.vel.y === 0 ? landed : null);
+  }
+  R = 0.4; H = 2.3;
+  if (before > 2 && Math.hypot(player.vel.x, player.vel.z) < before * 0.5) { c.speed *= -0.3; sfx.land(); vibrate(40); }
+  player.grounded = !!landed;
+  player.ground = landed;
+  safeTimer -= dt;
+  if (landed && landed.safe && safeTimer <= 0) { safeTimer = 0.4; (player.lastSafe ??= new THREE.Vector3()).copy(player.pos); }
+  c.group.position.copy(player.pos);
+  c.group.rotation.y = c.heading;
+  player.facing = c.heading;
+  for (const wh of c.wheels) wh.rotation.x += c.speed * dt * 2;
+}
+
+function enterCar(c) {
+  const price = c.type.price;
+  const key = `car:${c.kind}`;
+  if (price && !save.owned.includes(key)) {
+    if (save.coins < price) { toast(`${c.type.name}: ${price} Münzen nötig`); sfx.wrong(); return; }
+    save.coins -= price;
+    save.owned.push(key);
+    persist();
+    toast(`${c.type.name} gekauft!`);
+    sfx.right();
+  }
+  driving = c;
+  c.speed = 0;
+  c.heading = c.group.rotation.y;
+  player.pos.copy(c.group.position);
+  player.vel.set(0, 0, 0);
+  cam.yaw = c.heading + Math.PI;
+  sfx.open();
+  updateHud();
+}
+
+function exitCar(place = true) {
+  const c = driving;
+  if (!c) return;
+  driving = null;
+  if (place) {
+    const left = new THREE.Vector3(Math.cos(c.heading), 0, -Math.sin(c.heading));
+    player.pos.addScaledVector(left, 2.4);
+    player.pos.y = Math.max(player.pos.y, stage.heightAt ? stage.heightAt(player.pos.x, player.pos.z) : 0);
+  }
+  player.vel.set(0, 0, 0);
+  avatar.group.rotation.set(0, 0, 0);
+  if (mission) failMission('Auftrag abgebrochen');
+  updateHud();
+}
+
+function resetCar(c) {
+  c.group.position.copy(c.home.pos);
+  c.group.rotation.y = c.home.ry;
+  c.heading = c.home.ry;
+  c.speed = 0;
+}
+
+function nearestCar() {
+  if (!stage.cars) return null;
+  let best = null, bd = 3.4;
+  for (const c of stage.cars) {
+    const d = Math.hypot(c.group.position.x - player.pos.x, c.group.position.z - player.pos.z);
+    if (d < bd && Math.abs(c.group.position.y - player.pos.y) < 2) { bd = d; best = c; }
+  }
+  return best;
+}
+
+// Kontext-Knopf: Einsteigen / Kaufen / Aussteigen
+let actionCar = null;
+function updateActionButton() {
+  const btn = $('btn-action');
+  let label = null;
+  actionCar = null;
+  if (state === 'play') {
+    if (driving) label = 'Aussteigen';
+    else {
+      const c = nearestCar();
+      if (c) {
+        actionCar = c;
+        const owned = !c.type.price || save.owned.includes(`car:${c.kind}`);
+        label = owned ? 'Einsteigen' : `Kaufen ${c.type.price}`;
+      }
+    }
+  }
+  btn.hidden = !label;
+  if (label && btn.textContent !== label) btn.textContent = label;
+}
+function pressAction() {
+  if (state !== 'play') return;
+  if (driving) exitCar();
+  else if (actionCar) enterCar(actionCar);
+}
+
+// ---------- Aufträge ----------
+const beacon = targetBeacon();
+const arrow = guideArrow();
+const passenger = makePerson();
+passenger.visible = false;
+scene.add(beacon, arrow, passenger);
+let speederCurve = null;
+
+function startMission(m) {
+  mission = { m, idx: 0, time: m.time || 60, speeder: null };
+  if (m.type === 'police') {
+    const pts = m.path.map(([x, z]) => new THREE.Vector3(x, stage.heightAt(x, z), z));
+    speederCurve = new THREE.CatmullRomCurve3(pts, true);
+    const car = makeCar('sport', '#8b5cf6');
+    stage.add(car.group);
+    mission.speeder = { car, u: 0, L: speederCurve.getLength() };
+  }
+  sfx.open();
+  updateMissionHud();
+}
+
+function missionTarget() {
+  const mi = mission;
+  if (mi.speeder) return mi.speeder.car.group.position;
+  const [x, z] = mi.m.stages[mi.idx].at;
+  return new THREE.Vector3(x, stage.heightAt(x, z), z);
+}
+
+function endMissionVisuals() {
+  beacon.visible = false;
+  arrow.visible = false;
+  passenger.visible = false;
+  if (mission?.speeder) { stage.root.remove(mission.speeder.car.group); }
+  $('hud-mission').hidden = true;
+}
+
+function completeMission() {
+  const m = mission.m;
+  endMissionVisuals();
+  mission = null;
+  const reward = m.reward || 30;
+  addCoins(reward);
+  run.coins += reward;
+  sfx.win();
+  burst(player.pos.clone().add(new THREE.Vector3(0, 2, 0)), 60);
+  toast(`Auftrag erledigt! +${reward}`, 2000);
+  m.cooldown = true;
+  const done = (save.missionsDone ||= {});
+  const list = (done[stage.id] ||= []);
+  if (!list.includes(m.label)) list.push(m.label);
+  persist();
+  // Stern für genug verschiedene erledigte Aufträge
+  const ms = stage.def.missionStar;
+  if (ms && list.length >= ms.count) {
+    const s = stage.stars.find((x) => x.id === ms.id);
+    if (s && !s.got) setTimeout(() => collectStar(s), 1200);
+  }
+}
+
+function failMission(text = 'Zeit abgelaufen!') {
+  if (!mission) return;
+  mission.m.cooldown = true;
+  endMissionVisuals();
+  mission = null;
+  sfx.wrong();
+  toast(text, 1800);
+}
+
+function updateMission(dt) {
+  if (!mission || state !== 'play') return;
+  mission.time -= dt;
+  if (mission.time <= 0) return failMission();
+  const mi = mission;
+  if (mi.speeder) {
+    const sp = mi.speeder;
+    sp.u = (sp.u + (mi.m.speed || 14) * dt / sp.L) % 1;
+    const p = speederCurve.getPointAt(sp.u);
+    p.y = Math.max(p.y, stage.heightAt(p.x, p.z));
+    sp.car.group.position.copy(p);
+    sp.car.group.lookAt(p.clone().add(speederCurve.getTangentAt(sp.u).setY(0)));
+    for (const wh of sp.car.wheels) wh.rotation.x += dt * 20;
+  }
+  const target = missionTarget();
+  const d = Math.hypot(target.x - player.pos.x, target.z - player.pos.z);
+  beacon.visible = !mi.speeder;
+  beacon.position.copy(target);
+  const st = mi.speeder ? null : mi.m.stages[mi.idx];
+  passenger.visible = !!st?.person;
+  if (st?.person) { passenger.position.copy(target); passenger.rotation.y += dt; }
+  arrow.visible = true;
+  arrow.position.copy(player.pos).add(new THREE.Vector3(0, driving ? 4.2 : 3.4, 0));
+  arrow.lookAt(target.x, arrow.position.y, target.z);
+  if (d < (mi.speeder ? 3.6 : 4.2) && driving) {
+    if (mi.speeder) return completeMission();
+    sfx.coin();
+    mi.idx++;
+    if (mi.idx >= mi.m.stages.length) return completeMission();
+    toast(mi.m.stages[mi.idx].text, 1500);
+  }
+  updateMissionHud(d);
+}
+
+function updateMissionHud(d) {
+  const el = $('hud-mission');
+  if (!mission) { el.hidden = true; return; }
+  const mi = mission, secs = Math.max(0, Math.ceil(mi.time));
+  const text = mi.speeder ? 'Hol den Raser ein!' : mi.m.stages[mi.idx].text;
+  el.hidden = false;
+  el.innerHTML = `<b>${mi.m.label}</b> · ${text}<span>${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}${d ? ` · ${Math.round(d)} m` : ''}</span>`;
+  el.classList.toggle('hurry', secs <= 10);
 }
 
 // Bereich verlassen? Dann darf derselbe Auslöser wieder reagieren
@@ -308,7 +564,7 @@ function checkWorld() {
     }
   }
   for (const g of stage.gates) {
-    if (!g.open && overlaps(g.trigger.min, g.trigger.max)) return openTask({ type: 'gate', gate: g });
+    if (!driving && !g.open && overlaps(g.trigger.min, g.trigger.max)) return openTask({ type: 'gate', gate: g });
   }
   for (const ch of stage.chests) {
     const d = Math.hypot(p.x - ch.pos.x, p.z - ch.pos.z);
@@ -322,10 +578,24 @@ function checkWorld() {
     if (!s.got && s.pos.distanceToSquared(center) < 2.6) collectStar(s);
   }
   for (const pt of stage.portals) {
-    if (!inZone(pt, pt.trigger)) continue;
-    if (pt.target === 'hub') return travel('hub');
+    const hit = stage.portalHit(pt, p);
+    if (pt.cooldown && !hit) pt.cooldown = false;
+    if (!hit || pt.cooldown) continue;
+    if (driving) exitCar(false);
+    if (pt.free) return travel(pt.target);
     return openTask({ type: 'portal', portal: pt });
   }
+  // Aufträge: nur im Auto starten
+  for (const m of stage.missions || []) {
+    const d = Math.hypot(p.x - m.start.x, p.z - m.start.z);
+    if (m.cooldown && d > 4) m.cooldown = false;
+    if (m.cooldown || d > 3 || mission) continue;
+    m.cooldown = true;
+    if (!driving) { toast('Steig in ein Auto, um den Auftrag zu starten!'); continue; }
+    if (m.car && driving.kind !== m.car) { toast(`Dafür brauchst du: ${CAR_TYPES[m.car].name}`); continue; }
+    return openTask({ type: 'mission', mission: m });
+  }
+  if (driving) return;
   for (const r of stage.rides) {
     if (inZone(r, r.station)) return openTask({ type: 'ride', ride: r });
   }
@@ -339,10 +609,17 @@ function checkWorld() {
 
 // ---------- Kamera ----------
 const camTarget = new THREE.Vector3();
+let lastLookT = -10;
 const seatPos = new THREE.Vector3(), seatFwd = new THREE.Vector3(), seatQuat = new THREE.Quaternion();
 const rideCam = { pos: new THREE.Vector3(), look: new THREE.Vector3() };
 function updateCamera(dt, snap = false) {
   const look = input.consumeLook();
+  if (look.dx || look.dy) lastLookT = time;
+  if (state === 'play' && driving && time - lastLookT > 1.2) {
+    let diff = driving.heading + Math.PI - cam.yaw;
+    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+    cam.yaw += diff * Math.min(1, dt * 3);
+  }
   if (state === 'play') {
     cam.yaw -= look.dx * 0.0075;
     cam.pitch = THREE.MathUtils.clamp(cam.pitch + look.dy * 0.005, -0.15, 1.25);
@@ -358,7 +635,7 @@ function updateCamera(dt, snap = false) {
     camera.position.lerp(rideCam.pos, snap ? 1 : 1 - Math.exp(-dt * 6));
     camera.lookAt(rideCam.look);
   } else {
-    const dist = cam.dist * (camera.aspect < 1 ? 1.25 : 1);
+    const dist = (driving ? Math.max(cam.dist, 12) : cam.dist) * (camera.aspect < 1 ? 1.25 : 1);
     camTarget.copy(player.pos).add(new THREE.Vector3(0, 2, 0));
     const want = new THREE.Vector3(
       Math.sin(cam.yaw) * Math.cos(cam.pitch),
@@ -382,6 +659,8 @@ function updateCamera(dt, snap = false) {
 
 // ---------- Level & Welten laden ----------
 function clearStage() {
+  if (mission) { endMissionVisuals(); mission = null; }
+  driving = null;
   if (stage) stage.dispose();
   stage = null;
   player.lastSafe = null;
@@ -407,6 +686,8 @@ function loadWorld(id) {
   const def = WORLDS[id];
   setTheme(def.theme);
   stage = new World(scene, def, save.worldStars[id] || [], { worldStars: save.worldStars, level: save.level });
+  stage.gravity = def.gravity;
+  stage.jump = def.jump;
   player.checkpoint.copy(stage.spawn);
   respawn();
   player.facing = stage.spawnYaw + Math.PI;
@@ -423,14 +704,14 @@ function travel(target) {
   if (target === 'parkour') { startParkour(save.level); return; }
   loadWorld(target);
   // Zurück auf der Insel: vor dem Portal der Welt herauskommen, aus der man kommt
-  if (target === 'hub' && from) {
+  if (WORLDS[target].isHub && from) {
     const pt = stage.portals.find((p) => p.target === from || (from === 'parkour' && p.target === 'parkour'));
     if (pt) {
       pt.cooldown = true;
       player.pos.copy(pt.front);
       player.checkpoint.copy(pt.front);
-      cam.yaw = { s: Math.PI, n: 0, e: -Math.PI / 2, w: Math.PI / 2 }[pt.facing];
-      player.facing = cam.yaw + Math.PI;
+      cam.yaw = pt.angle + Math.PI;
+      player.facing = pt.angle;
     }
   }
   updateCamera(0, true);
@@ -447,13 +728,14 @@ function addCoins(n) {
 }
 
 function totalStars() { return THEME_WORLDS.reduce((s, id) => s + (save.worldStars[id] || []).length, 0); }
+const MAX_STARS = THEME_WORLDS.reduce((s, id) => s + Object.keys(WORLDS[id].stars || {}).length, 0);
 
 function updateHud() {
   $('hud-coins').textContent = save.coins;
   const gates = $('hud-gates');
   if (stage.isWorld) {
     $('hud-level').textContent = stage.name;
-    if (stage.id === 'hub') gates.innerHTML = `<i class="open wide">★ ${totalStars()} / ${THEME_WORLDS.length * 4}</i>`;
+    if (stage.def.isHub) gates.innerHTML = `<i class="open wide">★ ${totalStars()} / ${MAX_STARS}</i>`;
     else gates.innerHTML = Object.keys(stage.def.stars).map((id) => `<i class="${stage.collected.has(id) ? 'open' : ''}">★</i>`).join('');
   } else {
     $('hud-level').textContent = `Level ${stage.number} · Klasse ${save.grade}`;
@@ -542,7 +824,7 @@ function renderMenu() {
   $('grade-topic').textContent = GRADES[save.grade - 1].topics;
   for (const b of $('diff-seg').children) b.setAttribute('aria-checked', String(Number(b.dataset.v) === save.difficulty));
   for (const b of $('mode-seg').children) b.setAttribute('aria-checked', String(b.dataset.v === save.mode));
-  $('play-level').textContent = `★ ${totalStars()} / ${THEME_WORLDS.length * 4}`;
+  $('play-level').textContent = `★ ${totalStars()} / ${MAX_STARS}`;
   $('menu-coins').textContent = save.coins;
   const { solved, correct } = save.stats;
   $('menu-stats').textContent = solved ? `${solved} Aufgaben · ${Math.round((correct / solved) * 100)} % richtig` : 'Noch keine Aufgaben gelöst';
@@ -665,6 +947,7 @@ let answered = false;
 
 function openTask(ctx) {
   taskCtx = ctx;
+  if (driving) driving.speed = 0;
   setState('task');
   player.vel.set(0, player.vel.y > 0 ? 0 : player.vel.y, 0);
   newTask();
@@ -672,7 +955,7 @@ function openTask(ctx) {
 }
 
 // Bei falscher Antwort gibt es eine neue Aufgabe (Tore, Portale, Fahrten) oder es geht einfach weiter
-const retryTypes = new Set(['gate', 'portal', 'ride']);
+const retryTypes = new Set(['gate', 'portal', 'ride', 'mission']);
 
 function newTask() {
   // Bonus-Truhen sind eine Stufe schwerer (bis maximal "schwer")
@@ -691,6 +974,7 @@ function taskTitle() {
     case 'portal': return [`Eintrittskarte: ${c.portal.label}`, 'ticket'];
     case 'ride': return [`Fahrkarte: ${c.ride.name}`, 'ticket'];
     case 'feed': return [`Füttere ${ANIMAL_NAMES[c.animal.kind] || 'das Tier'}`, 'feed'];
+    case 'mission': return [`Auftrag: ${c.mission.label}`, 'ticket'];
     default: return ['Aufgabe', ''];
   }
 }
@@ -840,6 +1124,9 @@ function solved() {
       taskCtx = null;
       startRide(c.ride);
       return;
+    case 'mission':
+      startMission(c.mission);
+      break;
     default:
       break;
   }
@@ -866,6 +1153,7 @@ function closeTask(pushBack = true) {
     if (c.type === 'portal') c.portal.cooldown = true;
     if (c.type === 'ride') c.ride.cooldown = true;
     if (c.type === 'feed') c.animal.cooldown = true;
+    if (c.type === 'mission') c.mission.cooldown = true;
   }
   taskCtx = null;
   setState('play');
@@ -962,9 +1250,9 @@ function showWorldDone() {
   $('done-title').textContent = `${stage.name} geschafft!`;
   $('done-stars').innerHTML = '<span class="on">★</span><span class="on">★</span><span class="on">★</span>';
   $('done-stats').innerHTML = `
-    <dt>Sterne</dt><dd>4 von 4</dd>
+    <dt>Sterne</dt><dd>${stage.collected.size} von ${Object.keys(stage.def.stars).length}</dd>
     <dt>Welt-Bonus</dt><dd>+100</dd>
-    <dt>Alle Welten</dt><dd>★ ${totalStars()} / ${THEME_WORLDS.length * 4}</dd>`;
+    <dt>Alle Welten</dt><dd>★ ${totalStars()} / ${MAX_STARS}</dd>`;
   $('btn-next').textContent = 'Weiter erkunden';
   $('btn-done-menu').textContent = 'Zur Mathe-Insel';
   show('done');
@@ -987,6 +1275,8 @@ function pause() {
   show('hud', 'pause');
 }
 $('btn-pause').addEventListener('click', pause);
+$('btn-action').addEventListener('click', pressAction);
+window.addEventListener('keydown', (e) => { if ((e.key === 'e' || e.key === 'E' || e.key === 'Enter') && state === 'play') pressAction(); });
 $('btn-resume').addEventListener('click', () => { setState('play'); show('hud'); });
 $('btn-respawn').addEventListener('click', () => { respawn(); setState('play'); show('hud'); });
 $('btn-restart').addEventListener('click', () => startParkour(stage.number));
@@ -1007,10 +1297,12 @@ function frame(now) {
   time += dt;
   if (stage) {
     if (state === 'ride') rideT += dt;
+    stage.focus = camera.position;
     if (state !== 'pause') stage.update(dt, time, ride, rideT);
     if (state === 'play') {
-      stepPlayer(dt);
+      if (driving) stepCar(dt); else stepPlayer(dt);
       checkWorld();
+      updateMission(dt);
     } else if (state === 'task' || state === 'done') {
       stepPlayer(dt); // Schwerkraft weiterlaufen lassen, aber ohne Eingabe
     }
@@ -1021,7 +1313,12 @@ function frame(now) {
       cam.dist = state === 'shop' ? 6 : 9;
       player.facing = cam.yaw;
     }
-    if (state === 'ride' && ride) {
+    if (driving) {
+      driving.seat.getWorldPosition(seatPos);
+      avatar.group.position.copy(seatPos);
+      avatar.group.rotation.set(0, driving.heading, 0);
+      avatar.sit(dt, time);
+    } else if (state === 'ride' && ride) {
       ride.seat.getWorldPosition(seatPos);
       ride.seat.getWorldDirection(seatFwd);
       ride.seat.getWorldQuaternion(seatQuat);
@@ -1037,6 +1334,7 @@ function frame(now) {
       avatar.animate(dt, state === 'menu' || state === 'shop' ? 0 : speed, !player.grounded && state !== 'menu' && state !== 'shop', time);
     }
     updateCamera(dt);
+    updateActionButton();
   }
   updateConfetti(dt);
   renderer.render(scene, camera);
@@ -1072,9 +1370,10 @@ if ('serviceWorker' in navigator && window.isSecureContext && !location.hostname
 // Test-Zugriff für automatisierte Prüfungen (nur mit ?debug in der Adresse)
 if (new URLSearchParams(location.search).has('debug')) {
   window.__mathblox = {
-    player, input, save,
+    player, input, save, cam, camera,
     get stage() { return stage; }, get level() { return stage; }, get state() { return state; }, get ride() { return ride; }, get task() { return task; },
     get drawCalls() { return renderer.info.render.calls; },
-    startGame: startParkour, startParkour, startAdventure, travel, loadWorld, levelComplete, openTask, startRide,
+    startGame: startParkour, startParkour, startAdventure, travel, loadWorld, levelComplete, openTask, startRide, enterCar, exitCar, startMission,
+    get driving() { return driving; }, get mission() { return mission; },
   };
 }

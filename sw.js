@@ -1,5 +1,5 @@
 // Service Worker: speichert alle Spieldateien, damit Mathblox auch offline läuft.
-const CACHE = 'mathblox-v3';
+const CACHE = 'mathblox-v4';
 const FILES = [
   './',
   'index.html',
@@ -15,6 +15,24 @@ const FILES = [
   'js/worlds.js',
   'js/animals.js',
   'js/rides.js',
+  'js/driving.js',
+  'js/worlds/africa-kit.js',
+  'js/worlds/africa.js',
+  'js/worlds/antarctica.js',
+  'js/worlds/asia.js',
+  'js/worlds/australia.js',
+  'js/worlds/city-kit.js',
+  'js/worlds/city-models.js',
+  'js/worlds/city.js',
+  'js/worlds/common.js',
+  'js/worlds/europe.js',
+  'js/worlds/halloween.js',
+  'js/worlds/knights.js',
+  'js/worlds/mars.js',
+  'js/worlds/northamerica.js',
+  'js/worlds/southamerica.js',
+  'js/worlds/tenerife.js',
+  'js/worlds/western.js',
   'vendor/three.module.min.js',
   'manifest.webmanifest',
   'icons/icon.svg',
