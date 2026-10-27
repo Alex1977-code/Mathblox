@@ -112,9 +112,8 @@ function makeDragon() {
     g.add(p);
     wings.push([p, s]);
   }
-  const legs = [];
   for (const [sx, sz] of [[-1, 1], [1, 1], [-1, -1], [1, -1]]) part(g, 0.4, 0.8, 0.5, c, sx * 0.6, 0.35, sz * 1.1);
-  return { g, wings, legs };
+  return { g, wings };
 }
 
 export const knights = {
