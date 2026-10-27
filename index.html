@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Mathblox</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="3D-Mathe-Parkour fürs Handy: Hüpfe durch Block-Welten und öffne Tore mit Matheaufgaben – Klasse 1 bis 10.">
+<meta name="theme-color" content="#3aa6ff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mathblox">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<canvas id="game" aria-label="Spielwelt"></canvas>
+
+<!-- Hauptmenü -->
+<section id="menu" class="screen">
+  <div class="menu-card">
+    <h1 class="logo" aria-label="Mathblox"><span>MATH</span><span>BLOX</span></h1>
+    <p class="tagline">Hüpf durch die Block-Welt. Jedes Tor öffnet sich nur mit der richtigen Lösung.</p>
+
+    <div class="field">
+      <span class="label" id="grade-label">Klasse</span>
+      <div class="grade-grid" id="grade-grid" role="radiogroup" aria-labelledby="grade-label"></div>
+      <p class="topic" id="grade-topic"></p>
+    </div>
+
+    <div class="field">
+      <span class="label" id="diff-label">Schwierigkeit</span>
+      <div class="segmented" id="diff-seg" role="radiogroup" aria-labelledby="diff-label">
+        <button type="button" data-v="0">Leicht</button>
+        <button type="button" data-v="1">Mittel</button>
+        <button type="button" data-v="2">Schwer</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <span class="label" id="mode-label">Antworten</span>
+      <div class="segmented" id="mode-seg" role="radiogroup" aria-labelledby="mode-label">
+        <button type="button" data-v="choice">Auswählen</button>
+        <button type="button" data-v="type">Eintippen</button>
+      </div>
+    </div>
+
+    <div class="menu-actions">
+      <button type="button" class="btn btn-go" id="btn-play">Spielen <small id="play-level">Level 1</small></button>
+      <div class="menu-row">
+        <button type="button" class="btn btn-blue" id="btn-shop">Avatar-Shop</button>
+        <button type="button" class="btn btn-ghost" id="btn-levels">Level wählen</button>
+      </div>
+    </div>
+    <div class="menu-foot">
+      <span class="coin-pill"><i class="coin-ico"></i><b id="menu-coins">0</b></span>
+      <span id="menu-stats" class="stats"></span>
+      <button type="button" class="icon-btn" id="btn-sound" aria-label="Ton an/aus">🔊</button>
+    </div>
+  </div>
+</section>
+
+<!-- Level-Auswahl -->
+<section id="levels" class="screen" hidden>
+  <div class="menu-card">
+    <h2>Level wählen</h2>
+    <p class="topic" id="levels-info"></p>
+    <div class="level-grid" id="level-grid"></div>
+    <button type="button" class="btn btn-ghost" data-close>Zurück</button>
+  </div>
+</section>
+
+<!-- Shop -->
+<section id="shop" class="screen screen-side" hidden>
+  <div class="menu-card shop-card">
+    <div class="shop-head">
+      <h2>Avatar-Shop</h2>
+      <span class="coin-pill"><i class="coin-ico"></i><b id="shop-coins">0</b></span>
+    </div>
+    <div class="tabs" id="shop-tabs" role="tablist">
+      <button type="button" data-tab="hat" role="tab">Hüte</button>
+      <button type="button" data-tab="shirt" role="tab">Shirt</button>
+      <button type="button" data-tab="pants" role="tab">Hose</button>
+      <button type="button" data-tab="skin" role="tab">Haut</button>
+    </div>
+    <div class="shop-grid" id="shop-grid"></div>
+    <p class="shop-msg" id="shop-msg" aria-live="polite"></p>
+    <button type="button" class="btn btn-go" data-close>Fertig</button>
+  </div>
+</section>
+
+<!-- Spiel-HUD -->
+<section id="hud" hidden>
+  <div class="hud-top">
+    <span class="coin-pill"><i class="coin-ico"></i><b id="hud-coins">0</b></span>
+    <div class="hud-center">
+      <span class="hud-level" id="hud-level">Level 1</span>
+      <span class="hud-gates" id="hud-gates"></span>
+    </div>
+    <button type="button" class="icon-btn" id="btn-pause" aria-label="Pause">❚❚</button>
+  </div>
+  <div class="streak" id="hud-streak" hidden></div>
+  <div class="joy-zone" id="joy-zone">
+    <div class="joy-base" id="joy-base"><div class="joy-knob" id="joy-knob"></div></div>
+  </div>
+  <button type="button" class="jump-btn" id="btn-jump" aria-label="Springen">⤒</button>
+  <p class="hint" id="hud-hint">Links ziehen: laufen · Rechts wischen: umschauen</p>
+</section>
+
+<!-- Mathe-Aufgabe -->
+<section id="task" class="screen" hidden>
+  <div class="task-card" role="dialog" aria-modal="true" aria-labelledby="task-title">
+    <div class="task-head">
+      <span class="task-badge" id="task-title">Mathe-Tor</span>
+      <button type="button" class="icon-btn small" id="task-close" aria-label="Schließen">✕</button>
+    </div>
+    <div class="task-q" id="task-q"></div>
+    <div class="task-input" id="task-input" hidden>
+      <span class="task-prefix" id="task-prefix"></span>
+      <output id="task-typed" class="typed"></output>
+      <span class="task-unit" id="task-unit"></span>
+    </div>
+    <div class="choices" id="task-choices"></div>
+    <div class="keypad" id="task-keypad" hidden></div>
+    <div class="task-feedback" id="task-feedback" aria-live="assertive" hidden></div>
+  </div>
+</section>
+
+<!-- Pause -->
+<section id="pause" class="screen" hidden>
+  <div class="menu-card narrow">
+    <h2>Pause</h2>
+    <p class="topic" id="pause-info"></p>
+    <button type="button" class="btn btn-go" id="btn-resume">Weiterspielen</button>
+    <button type="button" class="btn btn-blue" id="btn-respawn">Zum Checkpoint</button>
+    <button type="button" class="btn btn-ghost" id="btn-restart">Level neu starten</button>
+    <button type="button" class="btn btn-ghost" id="btn-menu">Hauptmenü</button>
+  </div>
+</section>
+
+<!-- Level geschafft -->
+<section id="done" class="screen" hidden>
+  <div class="menu-card narrow">
+    <h2 id="done-title">Level geschafft!</h2>
+    <div class="stars" id="done-stars"></div>
+    <dl class="done-stats" id="done-stats"></dl>
+    <button type="button" class="btn btn-go" id="btn-next">Nächstes Level</button>
+    <button type="button" class="btn btn-ghost" id="btn-done-menu">Hauptmenü</button>
+  </div>
+</section>
+
+<div class="toast" id="toast" aria-live="polite"></div>
+<div class="flash" id="flash"></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
