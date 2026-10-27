@@ -2,70 +2,9 @@
 // Lava-Steine, Mathe-Tore, Bonus-Truhen und das Ziel.
 import * as THREE from '../vendor/three.module.min.js';
 import { seededRng } from './math.js';
+import { studTexture, blockMat, blockGeometry, textSprite, disposeTree } from './blocks.js';
 
 const COLORS = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93', '#ff924c', '#52a675', '#4cc9f0', '#f15bb5'];
-
-let studTex = null;
-function studTexture() {
-  if (studTex) return studTex;
-  const c = document.createElement('canvas');
-  c.width = c.height = 64;
-  const g = c.getContext('2d');
-  g.fillStyle = '#ffffff';
-  g.fillRect(0, 0, 64, 64);
-  g.strokeStyle = 'rgba(0,0,0,0.10)';
-  g.lineWidth = 2;
-  g.strokeRect(1, 1, 62, 62);
-  const grad = g.createRadialGradient(28, 28, 2, 32, 32, 16);
-  grad.addColorStop(0, 'rgba(255,255,255,1)');
-  grad.addColorStop(1, 'rgba(0,0,0,0.12)');
-  g.fillStyle = grad;
-  g.beginPath(); g.arc(32, 32, 14, 0, Math.PI * 2); g.fill();
-  studTex = new THREE.CanvasTexture(c);
-  studTex.wrapS = studTex.wrapT = THREE.RepeatWrapping;
-  studTex.colorSpace = THREE.SRGBColorSpace;
-  studTex.anisotropy = 4;
-  return studTex;
-}
-
-const matCache = new Map();
-function blockMat(color) {
-  if (!matCache.has(color)) matCache.set(color, new THREE.MeshLambertMaterial({ color, map: studTexture() }));
-  return matCache.get(color);
-}
-
-// Box-Geometrie, deren UVs mit der Größe wachsen (eine Noppe pro Einheit)
-function blockGeometry(w, h, d) {
-  const geo = new THREE.BoxGeometry(w, h, d);
-  const uv = geo.attributes.uv;
-  const dims = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]];
-  for (let f = 0; f < 6; f++) {
-    for (let i = 0; i < 4; i++) {
-      const idx = f * 4 + i;
-      uv.setXY(idx, uv.getX(idx) * dims[f][0], uv.getY(idx) * dims[f][1]);
-    }
-  }
-  return geo;
-}
-
-function textSprite(text, { bg = '#2f7df6', fg = '#fff', size = 1.6 } = {}) {
-  const c = document.createElement('canvas');
-  c.width = 256; c.height = 128;
-  const g = c.getContext('2d');
-  g.fillStyle = bg;
-  g.beginPath();
-  if (g.roundRect) g.roundRect(8, 8, 240, 112, 28); else g.rect(8, 8, 240, 112);
-  g.fill();
-  g.fillStyle = fg;
-  g.font = '700 64px Fredoka, system-ui, sans-serif';
-  g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.fillText(text, 128, 70);
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false }));
-  s.scale.set(size * 2, size, 1);
-  return s;
-}
 
 export class Level {
   /**
@@ -441,13 +380,7 @@ export class Level {
 
   dispose() {
     this.scene.remove(this.root);
-    const shared = new Set(matCache.values());
-    this.root.traverse((o) => {
-      if (o.geometry) o.geometry.dispose();
-      const m = o.material;
-      if (!m || Array.isArray(m) || shared.has(m)) return;
-      if (m.map && m.map !== studTex) m.map.dispose();
-      m.dispose();
-    });
+    disposeTree(this.root);
   }
+
 }

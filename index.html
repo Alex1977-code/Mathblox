@@ -26,7 +26,7 @@
 <section id="menu" class="screen">
   <div class="menu-card">
     <h1 class="logo" aria-label="Mathblox"><span>MATH</span><span>BLOX</span></h1>
-    <p class="tagline">Hüpf durch die Block-Welt. Jedes Tor öffnet sich nur mit der richtigen Lösung.</p>
+    <p class="tagline">Erkunde die Mathe-Insel und ihre Themenwelten. Portale, Tore und Fahrgeschäfte öffnen sich nur mit der richtigen Lösung.</p>
 
     <div class="field">
       <span class="label" id="grade-label">Klasse</span>
@@ -52,10 +52,10 @@
     </div>
 
     <div class="menu-actions">
-      <button type="button" class="btn btn-go" id="btn-play">Spielen <small id="play-level">Level 1</small></button>
+      <button type="button" class="btn btn-go" id="btn-play">Spielen <small id="play-level">★ 0 / 12</small></button>
       <div class="menu-row">
         <button type="button" class="btn btn-blue" id="btn-shop">Avatar-Shop</button>
-        <button type="button" class="btn btn-ghost" id="btn-levels">Level wählen</button>
+        <button type="button" class="btn btn-ghost" id="btn-levels">Parkour-Level</button>
       </div>
     </div>
     <div class="menu-foot">
@@ -69,7 +69,7 @@
 <!-- Level-Auswahl -->
 <section id="levels" class="screen" hidden>
   <div class="menu-card">
-    <h2>Level wählen</h2>
+    <h2>Parkour-Level</h2>
     <p class="topic" id="levels-info"></p>
     <div class="level-grid" id="level-grid"></div>
     <button type="button" class="btn btn-ghost" data-close>Zurück</button>
@@ -109,7 +109,9 @@
   <div class="joy-zone" id="joy-zone">
     <div class="joy-base" id="joy-base"><div class="joy-knob" id="joy-knob"></div></div>
   </div>
-  <button type="button" class="jump-btn" id="btn-jump" aria-label="Springen">⤒</button>
+  <button type="button" class="jump-btn" id="btn-jump" aria-label="Springen">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 10 L50 30 H39 V40 H25 V30 H14 Z" /><rect x="25" y="45" width="14" height="5" rx="2.5" /></svg>
+  </button>
   <p class="hint" id="hud-hint">Links ziehen: laufen · Rechts wischen: umschauen</p>
 </section>
 
@@ -140,6 +142,7 @@
     <button type="button" class="btn btn-go" id="btn-resume">Weiterspielen</button>
     <button type="button" class="btn btn-blue" id="btn-respawn">Zum Checkpoint</button>
     <button type="button" class="btn btn-ghost" id="btn-restart">Level neu starten</button>
+    <button type="button" class="btn btn-blue" id="btn-hub">Zur Mathe-Insel</button>
     <button type="button" class="btn btn-ghost" id="btn-menu">Hauptmenü</button>
   </div>
 </section>
@@ -151,7 +154,7 @@
     <div class="stars" id="done-stars"></div>
     <dl class="done-stats" id="done-stats"></dl>
     <button type="button" class="btn btn-go" id="btn-next">Nächstes Level</button>
-    <button type="button" class="btn btn-ghost" id="btn-done-menu">Hauptmenü</button>
+    <button type="button" class="btn btn-ghost" id="btn-done-menu">Zur Mathe-Insel</button>
   </div>
 </section>
 

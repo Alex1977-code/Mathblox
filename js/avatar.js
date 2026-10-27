@@ -202,6 +202,14 @@ export class Avatar {
     g.add(this.hat);
   }
 
+  // Sitzhaltung während einer Fahrt: Beine nach vorn, Arme jubelnd nach oben
+  sit(dt, time) {
+    this.legL.rotation.x = this.legR.rotation.x = -1.45;
+    this.armL.rotation.x = -2.7 + Math.sin(time * 6) * 0.25;
+    this.armR.rotation.x = -2.7 + Math.cos(time * 6) * 0.25;
+    this.hat.traverse((o) => { if (o.userData.spin) o.rotation.z += dt * 2; });
+  }
+
   // speed: horizontale Geschwindigkeit, airborne: in der Luft
   animate(dt, speed, airborne, time) {
     const k = Math.min(speed / 8, 1);

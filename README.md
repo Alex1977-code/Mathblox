@@ -10,16 +10,34 @@ wenn man die Matheaufgabe richtig löst. Läuft direkt im Browser (Handy, Tablet
 - **Umschauen:** auf der rechten Seite wischen
 - Am PC: `WASD`/Pfeiltasten, `Leertaste`, Maus ziehen, Mausrad zoomt, `Esc` = Pause
 
-In jedem Level hüpft man über Plattformen zu den **Mathe-Toren**. Läuft man ans Tor, erscheint eine
+### Mathe-Insel und Themenwelten
+
+Nach „Spielen“ landet man auf der **Mathe-Insel**. Von dort führen Portale in die Welten –
+jedes Portal verlangt eine **Eintrittskarte**: eine richtig gelöste Aufgabe.
+
+| Welt | Inspiriert von | Sterne |
+|---|---|---|
+| Papageien-Paradies | Tierpark auf einer Tropeninsel | Papageien-Turm, Pinguin-Eiswelt (rutschige Eisschollen), Delfin-Lagune, Bootstour |
+| Märchenschloss | Freizeitpark mit Schloss | Schlossturm, Karussell, Riesenrad, Hecken-Irrgarten |
+| Achterbahn-Park | Freizeitpark in der Heide | Holzachterbahn, Freifallturm, Piratenschiff, Kletterwald |
+| Wolken-Parkour | – | die klassischen Parkour-Level |
+
+In den Welten gibt es umzäunte Bereiche, deren **Tor sich nur nach einer gelösten Aufgabe** öffnet,
+Fahrgeschäfte mit **Fahrkarten-Aufgabe** und viele Tiere: Papageien, Flamingos, Pinguine, Delfine,
+Schildkröten, Schwäne, Einhörner, Heidschnucken mit Hütehund, Hasen, Enten, Bienen und Schmetterlinge.
+Tiere mit **?** haben Hunger – eine richtige Antwort füttert sie (+Münzen, Herzchen).
+Wer alle vier Sterne einer Welt findet, bekommt einen Welt-Bonus.
+
+### Parkour-Level
+
+Im Wolken-Parkour hüpft man über Plattformen zu den **Mathe-Toren**. Läuft man ans Tor, erscheint eine
 Aufgabe. Richtig gelöst → Tor geht auf, Checkpoint gesetzt, Münzen gibt es obendrauf (Serien-Bonus!).
 Falsch → die richtige Lösung (oft mit Rechenweg) wird gezeigt und es kommt eine neue Aufgabe.
 Hinter manchen Toren stehen **Bonus-Truhen** mit einer etwas schwereren Aufgabe (+25 Münzen, nur ein Versuch).
-
-Mit den Münzen kauft man im **Avatar-Shop** Hüte, Shirt-, Hosen- und Hautfarben.
-Am Ziel gibt es 1–3 Sterne, je nachdem wie viele Fehler man gemacht hat.
-
 Ab Level 2 kommen bewegte Plattformen dazu, ab Level 3 Lava-Steine, ab Level 4 schmale Stege
 und lange Fahrplattformen, ab Level 6 Eisplatten, die nach kurzer Zeit verschwinden.
+
+Mit den Münzen kauft man im **Avatar-Shop** Hüte, Shirt-, Hosen- und Hautfarben.
 
 ## Klassen und Schwierigkeit
 
@@ -72,7 +90,11 @@ von vier verschiedenen Antworten, keine negativen Ergebnisse bis Klasse 6, Einga
 | `index.html`, `css/style.css` | Menüs, HUD, Aufgabenfenster |
 | `js/main.js` | Spielschleife, Physik, Kamera, Spielstand (localStorage) |
 | `js/math.js` | Aufgaben-Generator für Klasse 1–10 |
-| `js/level.js` | Level-Generator (Plattformen, Tore, Truhen, Münzen) |
+| `js/level.js` | Parkour-Level-Generator (Plattformen, Tore, Truhen, Münzen) |
+| `js/world.js`, `js/worlds.js` | Offene Welten: Bausteine und die vier Welten |
+| `js/rides.js` | Fahrgeschäfte (Achterbahn, Freifallturm, Piratenschiff, Karussell, Riesenrad, Boot) |
+| `js/animals.js` | Klötzchen-Tiere und ihr Verhalten |
+| `js/blocks.js` | Gemeinsame Noppen-Blöcke, Schilder, Materialien |
 | `js/avatar.js` | Klötzchen-Avatar und Shop-Artikel |
 | `js/controls.js` | Joystick, Sprungknopf, Tastatur, Kamera |
 | `js/audio.js` | Soundeffekte per WebAudio |
