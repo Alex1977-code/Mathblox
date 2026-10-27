@@ -90,7 +90,7 @@ const ROADS = [
 // Ebene Flächen für Orte, Stationen, Parks (x, z, Radius in Einheiten)
 const PADS = [
   [...P.teide, 3.2, 1.5], [...P.airport, 11, 45], [...P.cableBase, 4], [...P.cableTop, 2.5, 2], [...P.parador, 4],
-  [...P.icod, 8], [...P.guimar, 9], [...P.tenoFaro, 6], [...P.mascaBeach, 4], [...P.gigantes, 5], [...P.masca, 4],
+  [...P.icod, 8], [...P.guimar, 9], [...P.tenoFaro, 6], [...P.mascaBeach, 4, 3], [...P.gigantes, 5], [...P.masca, 4, 3],
   [...P.loro, 7], [...P.santaCruz, 7], [...P.laguna, 6], [...P.candelaria, 4], [...P.medano, 4], [...P.tfn, 9],
 ];
 
@@ -531,6 +531,16 @@ export const tenerife = {
     town(w, P.masca[0], P.masca[1], 4, 7, { minH: 2.5, maxH: 3.5, roof: 'tile' });
     sign(w, 'Masca', P.masca, 7);
     const [mbx, mbz] = P.mascaBeach, mby = w.heightAt(mbx, mbz);
+    // Wanderweg durch die Schlucht: Felsstufen von je 0,5 hinab zum Strand
+    const [vx, vz] = P.masca, vy = w.heightAt(vx, vz);
+    const ex = mbx + 6, ez = mbz - 1.5, nT = Math.max(4, Math.ceil((vy - mby) / 0.5));
+    for (let k = 1; k <= nT; k++) {
+      const t = k / (nT + 1), x = vx + (ex - vx) * t, z = vz + (ez - vz) * t;
+      const top = vy + (mby - vy) * t;
+      const ground = w.heightAt(x, z);
+      if (ground >= top) continue;
+      w.block(x, top, z, 2.2, top - ground + 0.6, 2.2, '#8a7a6a');
+    }
     w.enclosure({ x: mbx, z: mbz, w: 7, d: 7, side: 'e', h: 4.4, color: '#6b5a50', label: 'Strand von Masca', y: mby, cap: '#8a7a6a' });
     w.star('masca', mbx, mby, mbz, 'Masca-Schlucht');
     for (let k = 0; k < 4; k++) w.animal('goat', { pos: new THREE.Vector3(P.masca[0] + w.r(-5, 5), 0, P.masca[1] + w.r(-5, 5)), radius: 5, speed: 0.8, hungry: k === 0 });
