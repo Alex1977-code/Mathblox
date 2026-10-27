@@ -53,7 +53,7 @@ export const europe = {
     // ---------- Wege ----------
     const pave = '#e0d6c2';
     groundPath(w, [[0, 48], [0, -20]], 3.2, pave);
-    groundPath(w, [[-2, -6], [-22, -32]], 2.6, pave);
+    groundPath(w, [[-2, -6], [-18, -32]], 2.6, pave);
     groundPath(w, [[2, -6], [22, -14], [32, -14]], 2.6, pave);
     groundPath(w, [[0, 22], [14, 34]], 2.6, pave);
     groundPath(w, [[0, 26], [-22, 34]], 2.6, pave);
@@ -93,7 +93,7 @@ export const europe = {
     // ---------- Stern 1: Eiffelturm ----------
     const EX = 0, EZ = -28, iron = '#7a5c44', iron2 = '#6a4e38';
     const C = [[1, 1], [-1, 1], [-1, -1], [1, -1]];
-    const lv = [[9, G], [4.4, G + 10], [2.3, G + 20], [0.6, G + 33]];
+    const lv = [[9, G], [4.4, G + 10], [2.3, G + 20], [0.6, G + 35]];
     for (let s = 0; s < 3; s++) {
       const [r0, y0] = lv[s], [r1, y1] = lv[s + 1];
       for (const [cx, cz] of C) {
@@ -130,9 +130,9 @@ export const europe = {
     solidBox(w, EX, G + 20, EZ, 7.2, 0.6, 7.2, '#5a4434', { safe: true });
     w.box(7.6, 0.9, 7.6, iron2, EX, G + 19.2, EZ);
     solidBox(w, EX, G + 32, EZ, 3, 0.6, 3, '#5a4434', { safe: true });
-    w.box(2.2, 1.4, 2.2, '#8a6a50', EX, G + 33.6, EZ);
-    w.box(0.3, 4, 0.3, '#c8c8c8', EX, G + 36, EZ);
-    w.box(0.6, 0.6, 0.6, '#ff3b2f', EX, G + 38.2, EZ);
+    w.box(1.6, 1.2, 1.6, '#8a6a50', EX, G + 35.6, EZ);
+    w.box(0.3, 4, 0.3, '#c8c8c8', EX, G + 38.2, EZ);
+    w.box(0.6, 0.6, 0.6, '#ff3b2f', EX, G + 40.4, EZ);
     // Treppenplattformen: drei Wendel
     const stairs = [];
     const spiral = (r, n, da, a0, y0) => {
@@ -178,7 +178,7 @@ export const europe = {
     }
 
     // ---------- Uhrturm mit Parlament ----------
-    const BX = -26, BZ = -40, stoneC = '#d8c79a', stoneD = '#c4b283';
+    const BX = -22, BZ = -40, stoneC = '#d8c79a', stoneD = '#c4b283';
     solidBox(w, BX, G + 22, BZ, 4.6, 22, 4.6, stoneC);
     for (let y = 2; y < 15; y += 2.6) for (const [nx, nz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) for (const k of [-1, 1]) w.box(nz ? 0.5 : 0.08, 1.8, nz ? 0.08 : 0.5, '#7a8a9a', BX + nx * 2.33 + (nz ? k * 1 : 0), G + y + 1, BZ + nz * 2.33 + (nx ? k * 1 : 0));
     for (const [cx, cz] of C) w.box(0.5, 22, 0.5, stoneD, BX + cx * 2.3, G + 11, BZ + cz * 2.3);
@@ -211,17 +211,17 @@ export const europe = {
       for (const [ph, pm] of hands) { ph.rotation.z = -h / 12 * Math.PI * 2; pm.rotation.z = -m / 60 * Math.PI * 2; }
     });
     // Parlament
-    solidBox(w, -40, G + 7, -42, 22, 7, 7, stoneC);
-    for (let x = -50.5; x <= -29.5; x += 1.5) {
+    solidBox(w, -36, G + 7, -42, 22, 7, 7, stoneC);
+    for (let x = -46.5; x <= -25.5; x += 1.5) {
       w.box(0.35, 8.6, 0.35, stoneD, x, G + 4.3, -38.4);
       w.box(0.7, 2.6, 0.06, '#7a8a9a', x + 0.75, G + 4.4, -38.47);
       w.box(0.2, 1.2, 0.2, stoneD, x, G + 9.2, -38.4);
     }
-    w.box(22.2, 0.3, 7.2, '#46586a', -40, G + 7.2, -42);
-    for (let x = -49; x <= -31; x += 2) w.box(1, 1.3, 1, '#46586a', x, G + 7.9, -42, Math.PI / 4);
-    solidBox(w, -52, G + 15, -42, 6, 15, 6, stoneC);
-    for (let k = 0; k < 4; k++) w.box(0.5, 2.4, 0.5, '#ffd23f', -52 + (k % 2 ? 2.7 : -2.7), G + 16.2, -42 + (k < 2 ? 2.7 : -2.7));
-    for (let y = 3; y < 14; y += 3) w.box(1.4, 1.8, 0.1, '#7a8a9a', -52, G + y, -38.95);
+    w.box(22.2, 0.3, 7.2, '#46586a', -36, G + 7.2, -42);
+    for (let x = -45; x <= -27; x += 2) w.box(1, 1.3, 1, '#46586a', x, G + 7.9, -42, Math.PI / 4);
+    solidBox(w, -48, G + 15, -42, 6, 15, 6, stoneC);
+    for (let k = 0; k < 4; k++) w.box(0.5, 2.4, 0.5, '#ffd23f', -48 + (k % 2 ? 2.7 : -2.7), G + 16.2, -42 + (k < 2 ? 2.7 : -2.7));
+    for (let y = 3; y < 14; y += 3) w.box(1.4, 1.8, 0.1, '#7a8a9a', -48, G + y, -38.95);
     w.sign('Uhrturm', BX + 4, G + 6, BZ + 5, { bg: '#46586a', size: 0.8 });
 
     // ---------- Stern 3: Arena aus Bögen ----------
@@ -346,20 +346,19 @@ export const europe = {
       for (const hh of [0.5, 1.0]) w.box(0.12, 0.12, len, '#a07040', mx, H(mx, mz) + hh, mz, ry);
       collider(w, mx, H(mx, mz) + 1.1, mz, Math.max(0.3, Math.abs(x2 - x1)), 1.1, Math.max(0.3, Math.abs(z2 - z1)));
     };
-    fence(-54, 42, -54, 50); fence(-54, 50, -46, 50); fence(-46, 42, -46, 46); fence(-54, 42, -46, 42);
     fence(-16, 42, -16, 52); fence(-16, 52, -6, 52); fence(-6, 42, -6, 48); fence(-16, 42, -6, 42);
 
     // ---------- Stern 2: Gondelfahrt durch die Kanäle ----------
     for (const [x, z, sx, sz] of [[21, 30, 6, 32], [45, 30, 6, 32], [33, 17, 18, 6], [33, 43, 18, 6]]) w.water(x, z, sx - 0.1, sz - 0.1, { top: -0.55, color: '#3f9fa8', emissive: '#0b3a40' });
     // Brücken (Stufen hinauf und hinunter)
-    const bridgeX = [[15, 16, 1.5], [16, 17, 2.0], [17, 25, 2.5], [25, 26, 2.0], [26, 27, 1.5]];
+    const bridgeX = [[14, 15, 1.5], [15, 16, 2.0], [16, 17, 2.5], [17, 25, 3.0], [25, 26, 2.5], [26, 27, 2.0], [27, 28, 1.5]];
     for (const [a, b, top] of bridgeX) {
-      solidBox(w, (a + b) / 2, top, 30, b - a, top + 1, 3, top === 2.5 ? '#e0d2b8' : '#d6c6a8', { safe: true });
+      solidBox(w, (a + b) / 2, top, 30, b - a, top === 3 ? 0.6 : top - G + 0.5, 3, top === 3 ? '#e0d2b8' : '#d6c6a8', { safe: true });
       for (const s of [-1, 1]) w.box(b - a + 0.02, 0.8, 0.2, '#f2ece0', (a + b) / 2, top + 0.4, 30 + s * 1.4);
     }
-    const bridgeZ = [[49, 48, 1.5], [48, 47, 2.0], [47, 39, 2.5], [39, 38, 2.0], [38, 37, 1.5]];
+    const bridgeZ = [[50, 49, 1.5], [49, 48, 2.0], [48, 47, 2.5], [47, 39, 3.0], [39, 38, 2.5], [38, 37, 2.0], [37, 36, 1.5]];
     for (const [a, b, top] of bridgeZ) {
-      solidBox(w, 33, top, (a + b) / 2, 3, top + 1, a - b, top === 2.5 ? '#e0d2b8' : '#d6c6a8', { safe: true });
+      solidBox(w, 33, top, (a + b) / 2, 3, top === 3 ? 0.6 : top - G + 0.5, a - b, top === 3 ? '#e0d2b8' : '#d6c6a8', { safe: true });
       for (const s of [-1, 1]) w.box(0.2, 0.8, a - b + 0.02, '#f2ece0', 33 + s * 1.4, top + 0.4, (a + b) / 2);
     }
     // Häuser auf der Insel und an den Ufern
@@ -429,16 +428,16 @@ export const europe = {
     const A = (kind, x, z, o = {}) => beast(w, kind, { pos: V(x, 0, z), ...o });
     const stork = ['#ffffff', '#1a1a1a', '#1a1a1a'];
     nests.slice(0, 3).forEach(([x, top, z, span], i) => {
-      const ny = top + span * 0.55 * 0.5 + 0.9;
+      const ny = top + span * 0.55 + 1.2;
       w.box(1.4, 0.4, 1.4, '#7a5a3a', x, ny - 0.2, z);
       if (i < 2) A('bird', x, z, { pos: V(x, ny, z), y: ny, behavior: 'perch', colors: stork, scale: 1.3 });
     });
     A('bird', VX, VZ, { pos: V(VX, 0, VZ), y: 16, behavior: 'fly', radius: 12, speed: 4, colors: stork, scale: 1.4 });
-    A('cow', -38, -12, { radius: 4, speed: 0.5, hungry: true });
-    A('cow', -34, -10, { radius: 4, speed: 0.4 });
-    for (let i = 0; i < 3; i++) A('sheep', -13 + i * 2.5, 46 + (i % 2) * 2, { radius: 2.5, speed: 0.5, hungry: i === 1 });
-    A('horse', -50, 46, { radius: 2.5, speed: 1, color: '#8a5a30', hungry: true });
-    A('horse', -49, 45, { radius: 2.5, speed: 0.9, color: '#f2f2f2' });
+    A('cow', -26, 6, { radius: 3, speed: 0.5, hungry: true });
+    A('cow', -23, 4, { radius: 3, speed: 0.4 });
+    for (let i = 0; i < 3; i++) A('sheep', -10 + i * 2.5, -48 + (i % 2) * 2, { radius: 4, speed: 0.5, hungry: i === 1 });
+    A('horse', -12, 46, { radius: 2.5, speed: 1, color: '#8a5a30', hungry: true });
+    A('horse', -9, 48, { radius: 2.5, speed: 0.9, color: '#f2f2f2' });
     const pigeon = ['#9aa3b0', '#7d8794', '#5a6470'];
     A('bird', -3, -4, { radius: 3, speed: 1, behavior: 'hop', colors: pigeon, hungry: true });
     A('bird', 3, -10, { radius: 3, speed: 1, behavior: 'hop', colors: pigeon });
@@ -449,13 +448,13 @@ export const europe = {
     coinTrail(w, 0, 30, 0, 14, 4);
     coinsAt(w, [[0, 10], [0, 6], [-5.5, 10], [5.5, 10]]);
     coinTrail(w, 0, 2, 0, -18, 4);
-    coinTrail(w, -4, -10, -20, -30, 4);
+    coinTrail(w, -4, -10, -16, -29, 4);
     coinTrail(w, 6, -8, 30, -14, 5);
     coinTrail(w, 4, 25, 13, 33, 3);
-    coinsAt(w, [[21, 30, 2.5], [33, 43, 2.5], [33, 30], [30, 26], [36, 34]]);
+    coinsAt(w, [[21, 30, 3], [33, 43, 3], [33, 30], [30, 26], [36, 34]]);
     coinTrail(w, -6, 28, -20, 34, 3);
     coinsAt(w, [[VX + 3, VZ - 3], [VX - 3, VZ + 3], [-46, 2], [-36, -6], [-26, 8], [-50, -10]]);
-    coinTrail(w, -26, -34, -44, -34, 4);
+    coinTrail(w, -22, -34, -42, -34, 4);
 
     SB.flush();
   },
