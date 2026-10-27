@@ -85,7 +85,12 @@ Object.assign(P, {
   guia: geo(-16.775, 28.210), alcala: geo(-16.822, 28.207), arena: geo(-16.826, 28.228), tamaimo: geo(-16.820, 28.265),
   tanque: geo(-16.788, 28.364), camel: geo(-16.775, 28.352), lunar: geo(-16.618, 28.168), castillo: geo(-16.7655, 28.3738),
   tram: geo(-16.252, 28.468), casaBalcones: geo(-16.5215, 28.3915),
+  cactus: geo(-16.668, 28.085), palmetum: geo(-16.262, 28.452),
 });
+P.mall = [P.waterpark[0] - 25, P.waterpark[1] + 3];      // Einkaufszentrum im Thai-Stil neben dem Wasserpark
+P.rock = [P.americas[0] + 7, P.americas[1] - 5];          // Rock-Café an der Strandpromenade
+P.taoro = [P.puerto[0] + 5, P.puerto[1] + 11];            // Taoro-Park über Puerto de la Cruz
+P.whale = [P.gigantes[0] + 7, P.gigantes[1] - 7];         // Walskelett an der Promenade
 
 // Bergstation La Rambleta: 7 Einheiten unterhalb des Gipfels in Richtung Talstation
 P.cableTop = (() => { const dx = P.cableBase[0] - P.teide[0], dz = P.cableBase[1] - P.teide[1], l = Math.hypot(dx, dz); return [P.teide[0] + dx / l * 7, P.teide[1] + dz / l * 7]; })();
@@ -118,6 +123,7 @@ const PADS = [
   [...P.loro, 7], [...P.santaCruz, 7], [...P.laguna, 6], [...P.candelaria, 4], [...P.medano, 4], [...P.tfn, 9],
   [...P.waterpark, 11], [...P.izana, 7], [...P.camel, 9, 10], [...P.lunar, 6], [...P.monkeys, 5], [...P.castillo, 4, 3],
   [...P.hidalgo, 3, 4], [...P.humboldt, 3, 5], [...P.sanIsidro, 6],
+  [...P.cactus, 13, 8], [...P.mall, 10, 8], [...P.palmetum, 8, 6], [...P.taoro, 7, 6],
 ];
 
 // Sperrflächen für Häuser (x, z, Radius): Parks, Tore, Bahnhöfe
@@ -125,6 +131,8 @@ const KEEP = [
   [...P.airport, 32], [...P.icod, 11], [...P.guimar, 12], [...P.loro, 10], [...P.auditorio, 6], [...P.candelaria, 7], [...P.cableBase, 7],
   [...P.waterpark, 14], [...P.izana, 10], [...P.camel, 12], [...P.lunar, 9], [...P.monkeys, 7], [...P.castillo, 6], [...P.gigantes, 5],
   [...P.hidalgo, 4], [...P.humboldt, 4], [...P.parador, 6], [...P.casaBalcones, 5],
+  [...P.cactus, 16], [...P.mall, 14], [...P.palmetum, 11], [...P.taoro, 9], [...P.rock, 6], [P.loro[0] + 11, P.loro[1] - 2, 6],
+  [P.taoro[0], P.taoro[1] - 9, 4], [P.puerto[0] - 2, P.puerto[1] - 5, 6], [...P.whale, 7],
 ];
 const onRoad = (x, z, m) => ROADS.some((r) => lineDist(x, z, r) < m) || lineDist(x, z, TRAM) < m;
 
@@ -271,7 +279,7 @@ function town(w, cx, cz, r, n, o = {}) {
   }
   for (let i = 0; i < Math.ceil(n / 4); i++) {
     const x = cx + w.r(-r, r), z = cz + w.r(-r, r);
-    if (!onRoad(x, z, 2) && !placed.some(([px, pz, pw]) => Math.abs(px - x) < pw / 2 + 1 && Math.abs(pz - z) < pw / 2 + 1)) palm(w, x, z);
+    if (!onRoad(x, z, 2) && !KEEP.some(([kx, kz, kr]) => Math.hypot(x - kx, z - kz) < kr + 1) && !placed.some(([px, pz, pw]) => Math.abs(px - x) < pw / 2 + 1 && Math.abs(pz - z) < pw / 2 + 1)) palm(w, x, z);
   }
   return placed;
 }
@@ -312,6 +320,54 @@ function lighthouse(w, [x, z], starId) {
   w.box(2.8, 0.4, 2.8, '#e8262b', x, top + 2.8, z);
 }
 
+// Thai-Dach: zwei steile Stufen mit goldenem First und Spitzen
+function thaiRoof(w, x, y, z, wd, dp, color = '#c0392b', trim = '#ffd23f') {
+  for (let t = 0; t < 2; t++) {
+    const k = 1 - t * 0.4, yy = y + t * 1.4, rh = dp * k * 0.36;
+    for (const sg of [-1, 1]) w.box(wd * k + 0.6, 0.25, dp * k * 0.64, t ? '#2fa84f' : color, x, yy + rh / 2, z + sg * dp * k / 4, 0, sg * 0.75);
+    w.box(wd * k + 0.7, 0.22, 0.3, trim, x, yy + rh + 0.08, z);
+  }
+  for (const sg of [-1, 1]) w.cone(0.22, 1.3, trim, x + sg * (wd / 2 + 0.2), y + dp * 0.3, z, { seg: 5, shadow: false });
+}
+
+// Goldene Elefanten-Statue auf Sockel (Blick nach +z)
+function elephantStatue(w, x, y, z, c = '#d4a017') {
+  w.block(x, y + 0.8, z, 3, 0.8, 4, '#efe3c8', { plain: true });
+  const b = y + 0.8;
+  w.box(2.2, 1.6, 3, c, x, b + 2, z);
+  for (const [dx, dz] of [[-0.7, -1], [0.7, -1], [-0.7, 1], [0.7, 1]]) w.box(0.6, 1.3, 0.6, c, x + dx, b + 0.65, z + dz);
+  w.box(1.5, 1.4, 1.2, c, x, b + 2.4, z + 1.9);
+  for (const sg of [-1, 1]) w.box(0.15, 1.2, 1, c, x + sg * 0.9, b + 2.4, z + 1.6);
+  w.box(0.45, 1.5, 0.45, c, x, b + 1.3, z + 2.6, 0, 0.2);
+}
+
+// Fischerboote, die im Hafen schaukeln
+function boats(w, list) {
+  const gs = list.map(([x, z, ry, c]) => {
+    const g = new THREE.Group();
+    part(g, 1.4, 0.6, 3.4, c, 0, 0.1, 0);
+    part(g, 1.5, 0.15, 3.5, '#ffffff', 0, 0.45, 0);
+    part(g, 0.8, 0.7, 0.9, '#ffffff', 0, 0.8, -0.5);
+    part(g, 0.08, 1.8, 0.08, '#6b4423', 0, 1.3, 0.6);
+    g.position.set(x, -0.25, z);
+    g.rotation.y = ry;
+    w.add(g);
+    return g;
+  });
+  w.updaters.push((dt, t) => gs.forEach((g, i) => { g.position.y = -0.25 + Math.sin(t * 1.6 + i) * 0.08; g.rotation.z = Math.sin(t * 1.2 + i * 2) * 0.05; }));
+}
+
+// Säulenkaktus mit Armen
+function cactus(w, x, z, s = 1) {
+  const y = w.heightAt(x, z);
+  w.box(0.6 * s, 3 * s, 0.6 * s, '#3f8a3a', x, y + 1.5 * s, z);
+  w.box(0.9 * s, 0.4 * s, 0.4 * s, '#3f8a3a', x + 0.55 * s, y + 1.4 * s, z);
+  w.box(0.4 * s, 1.1 * s, 0.4 * s, '#3f8a3a', x + 0.9 * s, y + 1.95 * s, z);
+  w.box(0.8 * s, 0.4 * s, 0.4 * s, '#3f8a3a', x - 0.5 * s, y + 2 * s, z);
+  w.box(0.4 * s, 0.8 * s, 0.4 * s, '#3f8a3a', x - 0.8 * s, y + 2.4 * s, z);
+  w.box(0.3 * s, 0.25 * s, 0.3 * s, '#ff595e', x, y + 3.1 * s, z);
+}
+
 // ---------- Welt ----------
 export const tenerife = {
   id: 'tenerife',
@@ -321,6 +377,7 @@ export const tenerife = {
   stars: {
     cablecar: 'Seilbahn zum Teide', teide: 'Teide-Gipfel (3718 m)', drago: 'Drachenbaum von Icod', masca: 'Masca-Schlucht',
     whales: 'Wal-Tour Los Gigantes', pyramids: 'Pyramiden von Güímar', lighthouse: 'Leuchtturm von Teno',
+    cactus: 'Kaktus-Labyrinth', agatha: 'Agatha-Christie-Treppe',
     waterpark: 'Wasserrutsche', observatory: 'Sternwarte Izaña', castle: 'Castillo de San Miguel', camels: 'Kamel-Safari',
     tram: 'Straßenbahn nach La Laguna', lunar: 'Paisaje Lunar', rental: 'Mietwagen-Profi (3 Aufträge)',
   },
@@ -509,7 +566,22 @@ export const tenerife = {
     for (let k = 0; k < 3; k++) w.box(3, 2.2, 10, '#ffffff', P.santaCruz[0] + 14 + k * 5, -0.2, P.santaCruz[1] + 8, 0.7);
     // Las Teresitas (goldener Sand) mit Palmen
     for (let k = 0; k < 8; k++) palm(w, P.teresitas[0] + w.r(-6, 6), P.teresitas[1] + w.r(-3, 3));
-    sign(w, 'Las Teresitas', P.teresitas, 5);
+    sign(w, 'Goldstrand Las Teresitas', P.teresitas, 5, { bg: '#e8b04a', fg: '#17233b' });
+    {
+      // Goldener Sandstrand entlang der Küste, Wellenbrecher davor, Sonnenschirme
+      const a = geo(-16.198, 28.498), b = geo(-16.176, 28.517);
+      const dx = b[0] - a[0], dz = b[1] - a[1], L = Math.hypot(dx, dz), ux = dx / L, uz = dz / L;
+      let nx = uz, nz = -ux;
+      if (w.heightAt((a[0] + b[0]) / 2 + nx * 8, (a[1] + b[1]) / 2 + nz * 8) > 0) { nx = -nx; nz = -nz; }
+      const ry = Math.atan2(ux, uz);
+      for (let k = 0; k <= L; k += 3) {
+        const x = a[0] + ux * k, z = a[1] + uz * k;
+        w.box(4, 0.3, 3.2, '#f2c94c', x + nx * 1, 0.45, z + nz * 1, ry);
+        w.box(4, 0.3, 3.2, '#f2c94c', x + nx * 4, 0.15, z + nz * 4, ry);
+        if (k % 6 === 0) w.box(3.6, 1.4, 1.6, '#7a7470', x + nx * 13, 0.2, z + nz * 13, ry);
+        if (k % 6 === 3) { w.box(0.12, 2, 0.12, '#ffffff', x + nx * 2.5, 1.4, z + nz * 2.5); w.cone(1.1, 0.6, k % 4 ? '#ff595e' : '#2f7df6', x + nx * 2.5, 2.2, z + nz * 2.5, { seg: 8, shadow: false }); }
+      }
+    }
     // La Laguna: bunte Altstadt mit Kathedrale, Flughafen Nord
     town(w, P.laguna[0], P.laguna[1], 12, 24, { roof: 'tile', balcony: '#7a4a2a', walls: ['#f2d16b', '#5b8fd6', '#d2693c', '#7fb069', '#f6f1e7', '#e8b04a'] });
     const [lx, lz] = P.laguna, ly = w.heightAt(lx, lz);
@@ -697,13 +769,118 @@ export const tenerife = {
     }));
     for (let k = 0; k < 8; k++) w.box(0.9, 0.25, 2, k % 2 ? '#ffffff' : '#ff595e', wpx - 9 + k * 2.2, wpy + 0.2, wpz - 1);
     for (let k = 0; k < 10; k++) palm(w, wpx + w.r(-11, 11), wpz + (k % 2 ? 9 : -9) + w.r(-1, 1));
-    sign(w, 'Wasserpark', [wpx, wpz - 9], 7, { bg: '#2f7df6', size: 1.3 });
+    sign(w, 'Wasserpark im Thai-Stil', [wpx, wpz - 9], 7, { bg: '#c0392b', fg: '#ffd23f', size: 1.3 });
+    thaiRoof(w, twx, twTop - 6, twz, 6.4, 6.4);
+    // Eingangstor mit Thai-Dach, goldene Elefanten, Strömungskanal rund um den Park
+    for (const sg of [-1, 1]) w.block(wpx + sg * 2.6, wpy + 4, wpz - 11, 0.9, 4, 0.9, '#c0392b', { plain: true });
+    thaiRoof(w, wpx, wpy + 4, wpz - 11, 6.4, 2.4);
+    for (const sg of [-1, 1]) elephantStatue(w, wpx + sg * 6, wpy, wpz - 12);
+    for (const [x, z, ww, dd] of [[0, -9.6, 22.8, 1.6], [0, 9.6, 22.8, 1.6], [-11.4, 0, 1.6, 20.8], [11.4, 0, 1.6, 20.8]]) w.water(wpx + x, wpz + z, ww, dd, { top: wpy + 0.14, color: '#2fc4e8' });
+    for (let k = 0; k < 6; k++) w.box(1.4, 0.5, 1.4, '#ffd23f', wpx - 10 + k * 4, wpy + 0.3, wpz + 9.6);
+
+    // Einkaufszentrum im Thai-Stil gleich nebenan
+    const [mlx, mlz] = P.mall, mly = w.heightAt(mlx, mlz);
+    w.box(22, 0.08, 14, '#e9dcc0', mlx, mly + 0.04, mlz);
+    w.block(mlx, mly + 5, mlz + 1, 16, 5, 8, '#f4e2c8', { plain: true, safe: true });
+    thaiRoof(w, mlx, mly + 5, mlz + 1, 16, 8);
+    for (const sg of [-1, 1]) { w.block(mlx + sg * 9.5, mly + 3.5, mlz + 1, 3, 3.5, 6, '#f4e2c8', { plain: true, safe: true }); thaiRoof(w, mlx + sg * 9.5, mly + 3.5, mlz + 1, 3, 6); }
+    for (let k = -3; k <= 3; k++) w.box(1.6, 2.2, 0.08, k === 0 ? '#ffd23f' : ['#7cc4ff', '#ff9fc4', '#9be38a'][(k + 3) % 3], mlx + k * 2.1, mly + 1.4, mlz - 3.05);
+    for (const sg of [-1, 1]) elephantStatue(w, mlx + sg * 4.5, mly, mlz - 6);
+    sign(w, 'Einkaufszentrum', [mlx, mlz - 3], 9.5, { bg: '#c0392b', fg: '#ffd23f' });
+    for (let k = 0; k < 6; k++) palm(w, mlx - 9 + k * 3.6, mlz - 8);
+    w.animal('cat', { pos: new THREE.Vector3(mlx + 3, 0, mlz - 6), radius: 3, speed: 1, color: '#d9cbb0', hungry: true });
 
     // Affenpark bei Los Cristianos
     const [mkx, mkz] = P.monkeys, mky = w.heightAt(mkx, mkz);
     for (let k = 0; k < 4; k++) w.tree('palm', mkx + w.r(-4, 4), mkz + w.r(-4, 4), w.r(0.9, 1.2), mky, false);
     for (let i = 0; i < 4; i++) w.animal('monkey', { pos: new THREE.Vector3(mkx + w.r(-3, 3), 0, mkz + w.r(-3, 3)), radius: 4, speed: 1.4, hungry: i === 0 });
     sign(w, 'Affenpark', P.monkeys, 6, { bg: '#7a4a2a' });
+    for (let k = 0; k < 16; k++) { const a = (k / 16) * Math.PI * 2; w.box(1.2, 1, 0.15, '#8a5e33', mkx + Math.cos(a) * 5.5, mky + 0.5, mkz + Math.sin(a) * 5.5, a + Math.PI / 2); }
+    w.block(mkx + 2, mky + 2.4, mkz - 2, 2.6, 0.4, 2.6, '#8a5e33', { plain: true });
+    for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) w.box(0.25, 2.2, 0.25, '#6b4423', mkx + 2 + dx, mky + 1.1, mkz - 2 + dz);
+    for (let i = 0; i < 3; i++) w.animal('monkey', { pos: new THREE.Vector3(mkx + w.r(-3, 3), 0, mkz + w.r(-3, 3)), radius: 4, speed: 1.6 });
+
+    // Kaktusfarm mit Kaktus-Labyrinth (Tor mit Aufgabe, Stern in der hintersten Ecke)
+    const [kfx, kfz] = P.cactus, kfy = w.heightAt(kfx, kfz);
+    w.maze({ x0: kfx - 10.2, z0: kfz - 10.2, C: 6, S: 3.4, color: '#4f8a3a', label: 'Kaktus-Labyrinth', starId: 'cactus', y: kfy, row: 2 });
+    for (let k = 0; k < 22; k++) {
+      const a = (k / 22) * Math.PI * 2, d = 12.5 + (k % 3);
+      const x = kfx + Math.cos(a) * d, z = kfz + Math.sin(a) * d;
+      if (x < kfx - 11 && Math.abs(z - (kfz - 10.2 + 2.5 * 3.4)) < 3) continue;
+      if (k % 3 === 2) { const y = w.heightAt(x, z); for (let q = 0; q < 3; q++) w.box(0.9, 1.1, 0.2, '#5f9a48', x + q * 0.4 - 0.4, y + 0.5 + q * 0.5, z, q - 1); w.box(0.25, 0.25, 0.25, '#ffd23f', x, y + 1.9, z); }
+      else cactus(w, x, z, w.r(0.8, 1.3));
+    }
+    lightHouse(w, kfx + 4, kfz - 14, 6, 3.4, 3, { wall: '#f6f1e7', roof: 'tile' });
+    sign(w, 'Kaktusfarm', [kfx + 4, kfz - 14], 6, { bg: '#4f8a3a' });
+
+    // Rock-Café an der Promenade von Playa de las Américas (mit Riesengitarre)
+    const [rcx, rcz] = P.rock;
+    const rcTop = lightHouse(w, rcx, rcz, 7, 5, 4, { wall: '#2b2b2b', roofColor: '#17233b', window: '#ffd23f' });
+    const rcy = rcTop - 4;
+    w.box(1.8, 2.4, 0.4, '#e8262b', rcx + 4.6, rcy + 1.6, rcz + 2.8, 0, 0, 0.25);
+    w.box(1.4, 1.8, 0.42, '#e8262b', rcx + 4.9, rcy + 3.1, rcz + 2.8, 0, 0, 0.25);
+    w.box(0.35, 4, 0.3, '#6b4423', rcx + 5.5, rcy + 5.2, rcz + 2.8, 0, 0, 0.25);
+    w.box(0.6, 1, 0.32, '#2b2b2b', rcx + 6.05, rcy + 7.4, rcz + 2.8, 0, 0, 0.25);
+    sign(w, 'Rock-Café', [rcx, rcz], 6.5, { bg: '#17233b', fg: '#ffd23f' });
+
+    // Walskelett an der Promenade von Los Gigantes
+    const [wsx, wsz] = P.whale, wsy = w.heightAt(wsx, wsz);
+    w.box(14, 0.4, 3, '#8d939b', wsx, wsy + 0.2, wsz);
+    for (let k = 0; k < 14; k++) {
+      const x = wsx - 6 + k * 0.9, sz = 1 - Math.abs(k - 5) / 11;
+      w.box(0.6, 0.6, 0.6, '#f2ece0', x, wsy + 2.4, wsz);
+      if (k > 1 && k < 10) for (const sg of [-1, 1]) {
+        w.box(0.18, 0.18, 1.2 * sz, '#f2ece0', x, wsy + 2.3, wsz + sg * 0.6 * sz, 0, sg * 0.5);
+        w.box(0.18, 1.6 * sz, 0.18, '#f2ece0', x, wsy + 1.5, wsz + sg * 1.15 * sz);
+      }
+    }
+    w.box(2.6, 1, 1.6, '#f2ece0', wsx - 7.2, wsy + 2.2, wsz);
+    for (const sg of [-1, 1]) w.box(3.2, 0.25, 0.25, '#f2ece0', wsx - 8, wsy + 1.6, wsz + sg * 0.6, sg * 0.15);
+    for (const dx of [-4, 0, 4]) w.box(0.3, 2.2, 0.3, '#5a5f66', wsx + dx, wsy + 1.2, wsz);
+    sign(w, 'Walskelett', [wsx, wsz], 5, { bg: '#1f8fc9', size: 1 });
+    boats(w, [[P.gigantes[0] - 7, P.gigantes[1] + 1, 0.3, '#ffffff'], [P.gigantes[0] - 8, P.gigantes[1] - 3, -0.2, '#1f8fc9'], [P.gigantes[0] - 10, P.gigantes[1] + 5, 1.2, '#e8262b']]);
+
+    // Palmetum: Palmenpark auf dem Hügel am Meer in Santa Cruz
+    const [pmx, pmz] = P.palmetum, pmy = w.heightAt(pmx, pmz);
+    w.water(pmx + 2, pmz + 1, 4, 3, { top: pmy + 0.1, color: '#4fc0f0' });
+    for (let k = 0; k < 26; k++) { const a = w.r(0, Math.PI * 2), d = w.r(1.5, 7.5); palm(w, pmx + Math.cos(a) * d, pmz + Math.sin(a) * d); }
+    for (let k = 0; k < 10; k++) w.box(1.4, 0.06, 1.4, '#d9cbb0', pmx - 7 + k * 1.5, pmy + 0.04, pmz - 0.5 + Math.sin(k) * 1.2);
+    sign(w, 'Palmetum – Palmenpark', P.palmetum, 7, { bg: '#2fa84f' });
+
+    // Hafen von Puerto de la Cruz: Mole, Leuchtfeuer, Fischerboote
+    const hpx = P.puerto[0] - 2, hpz = P.puerto[1] - 5;
+    w.block(hpx, 1.1, hpz - 6, 2.6, 3, 12, '#8d939b', { plain: true, safe: true });
+    w.block(hpx + 4, 1.1, hpz - 12.6, 10, 3, 2, '#7a7470', { plain: true, safe: true });
+    w.box(0.9, 2.6, 0.9, '#ffffff', hpx + 8, 2.4, hpz - 12.6); w.box(1.1, 0.7, 1.1, '#2fbf4a', hpx + 8, 4, hpz - 12.6);
+    boats(w, [[hpx + 3, hpz - 6, 0.1, '#1f8fc9'], [hpx + 5.5, hpz - 8, -0.3, '#ffd23f'], [hpx + 3.4, hpz - 9.6, 0.2, '#e8262b'], [hpx - 3.5, hpz - 7, 0.5, '#2fbf4a']]);
+    sign(w, 'Hafen Puerto de la Cruz', [hpx, hpz - 2], 4, { size: 0.9 });
+
+    // Steakhaus am Papageienpark (Punta Brava)
+    const shx = P.loro[0] + 11, shz = P.loro[1] - 2;
+    const shTop = lightHouse(w, shx, shz, 7, 5, 3.4, { wall: '#6b4423', roof: 'tile', window: '#ffd23f' });
+    const shy = shTop - 3.4;
+    w.box(7, 0.2, 2.6, '#c9a46a', shx, shy + 0.1, shz + 3.8);
+    for (let k = 0; k < 3; k++) { w.box(0.9, 0.7, 0.9, '#ffffff', shx - 2.2 + k * 2.2, shy + 0.55, shz + 3.8); w.cone(0.9, 0.5, '#e8262b', shx - 2.2 + k * 2.2, shy + 2, shz + 3.8, { seg: 8, shadow: false }); w.box(0.08, 1.5, 0.08, '#ffffff', shx - 2.2 + k * 2.2, shy + 1.2, shz + 3.8); }
+    sign(w, 'Steakhaus', [shx, shz], 5.5, { bg: '#6b4423', fg: '#ffd23f', size: 1 });
+
+    // Agatha-Christie-Treppe: bunte Stufen hinauf zum Taoro-Park mit dem alten Grand Hotel
+    const [tox, toz] = P.taoro, g0 = w.heightAt(tox, toz - 14), topP = g0 + 5.5;
+    const tiles = ['#f2d16b', '#5b8fd6', '#ffffff', '#d2693c'];
+    for (let k = 1; k <= 10; k++) {
+      const z = toz - 4.5 - (10 - k + 0.5) * 0.9, top = g0 + k * 0.5;
+      w.block(tox, top, z, 3, Math.max(0.6, top - w.heightAt(tox, z) + 1), 0.95, tiles[k % 4], { plain: true });
+      for (const sg of [-1, 1]) w.box(0.12, 0.9, 0.95, '#2b2b2b', tox + sg * 1.55, top + 0.45, z);
+    }
+    let lowP = Infinity;
+    for (const [dx, dz] of [[-6, -4.5], [6, -4.5], [-6, 4.5], [6, 4.5]]) lowP = Math.min(lowP, w.heightAt(tox + dx, toz + dz));
+    w.block(tox, topP, toz, 12, topP - lowP + 1.5, 9, '#e9dcc0', { plain: true, safe: true });
+    w.block(tox, topP + 4, toz + 2.6, 10, 4, 3.6, '#f6f1e7', { plain: true, safe: true });
+    w.box(10.4, 0.25, 2.4, '#b5532c', tox, topP + 4.5, toz + 3.5, 0, 0.55); w.box(10.4, 0.25, 2.4, '#b5532c', tox, topP + 4.5, toz + 1.7, 0, -0.55);
+    for (let k = -2; k <= 2; k++) w.box(1, 1.2, 0.08, '#3d5a80', tox + k * 2, topP + 2.2, toz + 0.76);
+    for (const dx of [-4.5, 4.5]) w.tree('palm', tox + dx, toz - 2.5, 0.9, topP, false);
+    w.star('agatha', tox, topP, toz - 2, 'Agatha-Christie-Treppe');
+    sign(w, 'Agatha-Christie-Treppe', [tox, toz - 14], 4.5, { bg: '#5b8fd6', size: 1 });
+    sign(w, 'Agatha Christie war 1927 im Hotel Taoro zu Gast', [tox, toz + 2.6], topP - w.heightAt(tox, toz + 2.6) + 6.5, { bg: '#ffffff', fg: '#17233b', size: 0.7 });
 
     // Barranco del Infierno: Wasserfall am Ende der Schlucht
     const [bix, biz] = P.barranco, biy = w.heightAt(bix, biz);

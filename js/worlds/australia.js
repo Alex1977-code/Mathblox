@@ -244,7 +244,7 @@ export const australia = {
     }
 
     // ---------- Korallenriff mit Glasbodenboot ----------
-    const lagoon = w.shape(new THREE.PlaneGeometry(16.5, 64), '#0a8fd0', 50.25, 0.95, 8, { rx: -Math.PI / 2, opacity: 0.42, emissive: '#03406a', shadow: false });
+    const lagoon = w.shape(new THREE.PlaneGeometry(16.5, 64), '#1ab8e0', 50.25, 0.95, 8, { rx: -Math.PI / 2, opacity: 0.55, emissive: '#0a6a90', shadow: false });
     lagoon.material.depthWrite = false;
     const CORAL = ['#ff5f7e', '#ff8a1f', '#b07bff', '#ffd23f', '#3fd0ff', '#ff3b9a', '#7ae05a'];
     for (let i = 0; i < 170; i++) {

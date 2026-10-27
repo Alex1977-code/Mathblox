@@ -201,7 +201,9 @@ export const halloween = {
 
     // ---------------- Stern 2: Friedhofs-Labyrinth ----------------
     const mz = { x0: -50, z0: -14, C: 7, S: 3.6 };
-    w.maze({ ...mz, H: 3.8, color: '#6f6a7f', label: 'Friedhof', starId: 'graveyard', starLabel: 'Friedhofs-Labyrinth', row: 3 });
+    w.maze({ ...mz, H: 3.8, color: '#6f6a7f', label: 'Friedhof', row: 3 });
+    // Stern in der hintersten Ecke (im Labyrinth ist jede Zelle erreichbar)
+    w.star('graveyard', mz.x0 + 6.5 * mz.S, 0, mz.z0 + 0.5 * mz.S, 'Friedhofs-Labyrinth');
     for (let i = 0; i <= 7; i++) for (const z of [mz.z0, mz.z0 + 7 * 3.6]) B(0.8, 0.5, 0.8, '#8a849a', mz.x0 + i * 3.6, 4.05, z);
     // Grabsteine in einigen Zellen (an der Wand, Wege bleiben frei)
     for (let j = 0; j < 7; j++) for (let i = 0; i < 7; i++) {
