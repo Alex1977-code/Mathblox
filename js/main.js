@@ -400,7 +400,9 @@ function startGame(n = save.level) {
   toast(`Level ${n}`);
 }
 
+let reloadOnMenu = false;
 function goMenu() {
+  if (reloadOnMenu) { location.reload(); return; }
   setState('menu');
   if (!level || level.number !== save.level) loadLevel(save.level);
   respawn();
@@ -788,7 +790,19 @@ Promise.race([fontsReady, new Promise((r) => setTimeout(r, 1500))]).then(() => {
 
 if ('serviceWorker' in navigator && window.isSecureContext && !location.hostname.endsWith('claude.ai')) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(() => { /* offline-Modus nicht verfügbar */ });
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+      .then((reg) => {
+        // Beim Zurückkehren in die App nach einer neuen Version schauen
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update().catch(() => {}); });
+      })
+      .catch(() => { /* offline-Modus nicht verfügbar */ });
+  });
+  // Neue Version aktiv: im Menü sofort neu laden, im Spiel erst beim nächsten Menübesuch
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController) return;
+    if (state === 'menu') location.reload();
+    else reloadOnMenu = true;
   });
 }
 

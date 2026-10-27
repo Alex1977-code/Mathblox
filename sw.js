@@ -1,5 +1,5 @@
 // Service Worker: speichert alle Spieldateien, damit Mathblox auch offline läuft.
-const CACHE = 'mathblox-v1';
+const CACHE = 'mathblox-v2';
 const FILES = [
   './',
   'index.html',
@@ -29,13 +29,14 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// Netzwerk zuerst (für Updates), bei Offline aus dem Cache
+// Netzwerk zuerst und am Browser-Cache vorbei (immer neueste Version), offline aus dem Cache
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
+  const sameOrigin = new URL(e.request.url).origin === location.origin;
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request, sameOrigin ? { cache: 'no-cache' } : undefined)
       .then((res) => {
-        if (res.ok && new URL(e.request.url).origin === location.origin) {
+        if (res.ok && sameOrigin) {
           const copy = res.clone();
           caches.open(CACHE).then((c) => c.put(e.request, copy));
         }
