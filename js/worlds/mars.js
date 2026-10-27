@@ -332,14 +332,14 @@ export const mars = {
       const a = a0 + i * 0.66;
       top = 1 + 2 + i * 1.6;
       const x = CRATER.x + Math.cos(a) * R0, z = CRATER.z + Math.sin(a) * R0;
-      w.block(x, top, z, 2.6, top - 0.5, 2.6, i % 2 ? '#8a3e24' : '#9c4a2c');
-      w.box(1.8, 0.6, 1.8, '#b0583a', x + 0.2, top + 0.2, z - 0.1, 0.5);
+      w.block(x, top, z, 2.6, top - 0.5, 2.6, i % 2 ? '#d8a878' : '#c4925e');
+      w.box(1.4, 0.4, 1.4, '#e8c098', x + 0.3, top + 0.15, z - 0.2, 0.5);
       rocks.push([x, top, z]);
       if (i % 2) w.coin(x, top + 0.6, z);
     }
     const ptop = top + 0.8;
-    w.block(CRATER.x, ptop, CRATER.z, 6, ptop - 0.5, 6, '#7f3420');
-    w.box(3, 1.2, 3, '#9c4a2c', CRATER.x - 0.4, ptop - 1, CRATER.z + 0.3, 0.7);
+    w.block(CRATER.x, ptop, CRATER.z, 6, ptop - 0.5, 6, '#c4925e');
+    w.box(6.1, 0.5, 6.1, '#e8c098', CRATER.x, ptop - 0.2, CRATER.z);
     w.star('crater', CRATER.x, ptop, CRATER.z, 'Krater-Parkour');
     w.sign('Krater-Parkour', CRATER.x + 15, H(CRATER.x + 15, CRATER.z + 15) + 4.6, CRATER.z + 15, { bg: '#8a3e24', size: 0.9 });
     w.sign('Wenig Schwerkraft: Du springst viel höher!', CRATER.x + 15, H(CRATER.x + 15, CRATER.z + 15) + 3.5, CRATER.z + 15, { bg: '#ffffff', fg: '#17233b', size: 0.6 });

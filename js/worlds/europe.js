@@ -442,7 +442,7 @@ export const europe = {
     A('bird', -3, -4, { radius: 3, speed: 1, behavior: 'hop', colors: pigeon, hungry: true });
     A('bird', 3, -10, { radius: 3, speed: 1, behavior: 'hop', colors: pigeon });
     A('bird', 0, -8, { pos: V(0, 0, -8), y: 9, behavior: 'fly', radius: 8, speed: -4, colors: pigeon });
-    for (let i = 0; i < 2; i++) A('duck', 45, 26 + i * 6, { pos: V(45, -0.55, 26 + i * 6), y: -0.55, behavior: 'swim', radius: 2, speed: 0.6 });
+    for (let i = 0; i < 2; i++) A('duck', 45, 26 + i * 6, { pos: V(45, -0.55, 26 + i * 6), y: -0.55, behavior: 'swim', radius: 2, speed: 0.6, hungry: i === 0 });
 
     // ---------- Münzen ----------
     coinTrail(w, 0, 30, 0, 14, 4);

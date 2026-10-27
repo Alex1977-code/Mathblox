@@ -198,18 +198,20 @@ export const southamerica = {
     for (const off of [-0.25, 0.25]) beam([bot[0] + off, bot[1], bot[2]], [tp[0] + off, tp[1], tp[2]], 0.08, '#30343a');
     const st = w.station(30, -17, 'Seilbahn', '#e8262b', G);
     const gon = new THREE.Group();
-    part(gon, 0.15, 1.6, 0.15, '#30343a', 0, -0.8, 0);
+    part(gon, 0.15, 0.7, 0.15, '#30343a', 0, -0.35, 0);
     part(gon, 0.8, 0.3, 0.6, '#30343a', 0, 0, 0);
-    part(gon, 2.4, 0.25, 2.4, '#e8262b', 0, -1.6, 0);
-    part(gon, 2.2, 1.2, 2.2, '#ffffff', 0, -2.3, 0);
-    part(gon, 2.25, 0.8, 1.6, '#7cc4ff', 0, -2.15, 0);
-    part(gon, 1.6, 0.8, 2.25, '#7cc4ff', 0, -2.15, 0);
-    part(gon, 2.4, 0.5, 2.4, '#e8262b', 0, -3.1, 0);
+    part(gon, 2.6, 0.25, 2.6, '#e8262b', 0, -0.75, 0);
+    for (const [a, b] of [[1.1, 1.1], [-1.1, 1.1], [1.1, -1.1], [-1.1, -1.1]]) part(gon, 0.15, 2.3, 0.15, '#ffffff', a, -2.0, b);
+    part(gon, 2.4, 0.4, 2.4, '#e8262b', 0, -3.25, 0);
+    part(gon, 2.4, 0.6, 0.1, '#ffffff', 0, -2.75, 1.15);
+    part(gon, 2.4, 0.6, 0.1, '#ffffff', 0, -2.75, -1.15);
+    part(gon, 0.1, 0.6, 2.4, '#ffffff', 1.15, -2.75, 0);
+    part(gon, 0.1, 0.6, 2.4, '#ffffff', -1.15, -2.75, 0);
     const N = 8, cpts = [];
     for (let i = 0; i <= N; i++) { const t = i / N; cpts.push([bot[0] + (tp[0] - bot[0]) * t, bot[1] + (tp[1] - bot[1]) * t - Math.sin(t * Math.PI) * 0.8, bot[2] + (tp[2] - bot[2]) * t]); }
     for (let i = N - 1; i >= 0; i--) cpts.push(cpts[i].slice());
     w.addRide(pathRide(w, {
-      points: cpts, closed: false, duration: 30, vehicle: gon, seat: [0, -2.85, -0.3], flat: true,
+      points: cpts, closed: false, duration: 30, vehicle: gon, seat: [0, -3.05, -0.3], flat: true,
       name: 'Zuckerhut-Seilbahn', starId: 'cablecar', station: st, exit: P(30, G, -13.4), idle: 'wait',
       camera(pos, fwd, out) { out.pos.set(pos.x - 9, pos.y + 2.5, pos.z + 6); out.look.set(pos.x + 2, pos.y - 1, pos.z - 3); },
       animate(v, t) { v.rotateX(Math.sin(t * 1.7) * 0.04); },
