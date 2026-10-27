@@ -43,7 +43,8 @@ export const city = {
     sky: ['#4a5fb8', '#f49a9a', '#ffd9a0'], fog: '#f6cfb0', sea: '#2f8fc8', fogNear: 110, fogFar: 290,
     light: { hemi: 1.5, sun: 2.2, sunColor: '#ffd9b0', sky: '#fff2e2', ground: '#9a8ab0' },
   },
-  stars: { skyscraper: 'Wolkenkratzer', taxi: 'Taxi-Tour', heli: 'Hubschrauber-Rundflug', crane: 'Baukran' },
+  stars: { skyscraper: 'Wolkenkratzer', taxi: 'Taxi-Tour', heli: 'Hubschrauber-Rundflug', crane: 'Baukran', driver: 'Profi-Fahrer (3 Aufträge)' },
+  missionStar: { id: 'driver', count: 3 },
   build(w) {
     const K = new Kit(w);
     const B = w.box.bind(w);
@@ -555,6 +556,20 @@ export const city = {
       },
     }));
     w.sign('Rundflug', 50, 6, 49.5, { bg: '#e8262b', size: 0.8 });
+
+    // ---------------- Fahrbare Autos und Aufträge ----------------
+    // Parkreihe auf der Straße vor der Plaza: einsteigen (Taxi, Polizei, Pizza gratis; Sportwagen und Monstertruck kosten Münzen)
+    for (const [x, kind] of [[-30, 'police'], [-16, 'taxi'], [16, 'pizza'], [30, 'sport']]) w.car({ x, z: 26.2, kind, ry: Math.PI / 2 });
+    w.sign('Autos: einsteigen und Aufträge erledigen!', 0, 5.2, 21.2, { bg: '#ffc531', fg: '#17233b', size: 0.8 });
+    w.star('driver', 0, 16, 26, 'Profi-Fahrer');
+    w.mission({ type: 'taxi', label: 'Taxi zum Strand', start: [-36, 12], time: 60, reward: 35,
+      stages: [{ at: [0, -8], text: 'Hol den Fahrgast an der Kreuzung ab', person: true }, { at: [-52, -40], text: 'Bring ihn zum Strand' }] });
+    w.mission({ type: 'pizza', label: 'Pizza-Blitz', start: [36, 12], time: 55, reward: 35,
+      stages: [{ at: [-36, -8], text: 'Liefere die Pizza in den Westen' }, { at: [36, -40], text: 'Noch eine Pizza in den Norden' }] });
+    w.mission({ type: 'race', label: 'Freeway-Rennen', start: [36, -26], time: 60, reward: 50,
+      stages: [{ at: [56, -48], text: 'Hoch auf den Freeway!' }, { at: [0, -50], text: 'Über die Hochstraße' }, { at: [-56, -48], text: 'Runter von der Rampe' }, { at: [-36, 24], text: 'Ziel: Strandallee' }] });
+    w.mission({ type: 'police', label: 'Raser stoppen', start: [0, 12], time: 60, reward: 45, speed: 12,
+      path: [[-36, -40], [0, -40], [36, -40], [36, -8], [36, 24], [0, 24], [-36, 24], [-36, -8]] });
 
     // ---------------- Tiere ----------------
     const pigeon = ['#9aa1ab', '#7d8590', '#5f6670'], gull = ['#ffffff', '#e6e8ea', '#9aa1ab'];

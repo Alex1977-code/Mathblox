@@ -20,7 +20,23 @@ jedes Portal verlangt eine **Eintrittskarte**: eine richtig gelöste Aufgabe.
 | Papageien-Paradies | Tierpark auf einer Tropeninsel | Papageien-Turm, Pinguin-Eiswelt (rutschige Eisschollen), Delfin-Lagune, Bootstour |
 | Märchenschloss | Freizeitpark mit Schloss | Schlossturm, Karussell, Riesenrad, Hecken-Irrgarten |
 | Achterbahn-Park | Freizeitpark in der Heide | Holzachterbahn, Freifallturm, Piratenschiff, Kletterwald |
+| Großstadt | sonnige Kalifornien-Metropole | Wolkenkratzer, Taxi-Tour, Hubschrauber-Rundflug, Baukran, Profi-Fahrer (Aufträge) |
+| Halloween | Kürbisse, Geister und Mondnacht | Spukhaus, Friedhofs-Labyrinth, Geisterbahn, Hexenbesen-Flug |
+| Teneriffa | die echte Insel als offene Welt (Höhenkarte nach Koordinaten) | 16 Sterne, u. a. Teide-Gipfel, Seilbahn, Masca, Wal-Tour, Wasserpark, Straßenbahn, Kamel-Safari |
+| Wilder Westen | Western-Stadt in der Wüste | 4 Sterne |
+| Ritterburg | Mittelalter mit Turnierplatz | 4 Sterne |
+| Mars | Raumstation auf dem roten Planeten (weniger Schwerkraft) | 4 Sterne |
+| Weltreise | Flughafen mit Flügen zu allen sieben Kontinenten | je 3 Sterne in Afrika, Asien, Europa, Nordamerika, Südamerika, Australien und Antarktis |
 | Wolken-Parkour | – | die klassischen Parkour-Level |
+
+**Fahr-Modus:** In der Großstadt und auf Teneriffa stehen Autos (Taxi, Polizei, Pizza-Flitzer gratis,
+Sportwagen und Monstertruck gegen Münzen). Mit „Einsteigen“ (oder `E`) fährt man los und erledigt
+Aufträge: Fahrgäste bringen, Pizza liefern, Rennen fahren, Raser stoppen – ganz ohne Gewalt.
+
+**Teneriffa** ist nach echten Koordinaten gebaut (1 Einheit ≈ 133 m): Teide und Las Cañadas, Anaga,
+Teno, Masca, über 35 Orte von Santa Cruz bis Los Gigantes, Straßen mit Linienbus und viele Ausflugsziele –
+Kaktusfarm, Affenpark, Goldstrand Las Teresitas, Wasserpark und Einkaufszentrum im Thai-Stil,
+Palmetum, Hafen und Agatha-Christie-Treppe in Puerto de la Cruz, Walskelett in Los Gigantes.
 
 In den Welten gibt es umzäunte Bereiche, deren **Tor sich nur nach einer gelösten Aufgabe** öffnet,
 Fahrgeschäfte mit **Fahrkarten-Aufgabe** und viele Tiere: Papageien, Flamingos, Pinguine, Delfine,
@@ -91,7 +107,9 @@ von vier verschiedenen Antworten, keine negativen Ergebnisse bis Klasse 6, Einga
 | `js/main.js` | Spielschleife, Physik, Kamera, Spielstand (localStorage) |
 | `js/math.js` | Aufgaben-Generator für Klasse 1–10 |
 | `js/level.js` | Parkour-Level-Generator (Plattformen, Tore, Truhen, Münzen) |
-| `js/world.js`, `js/worlds.js` | Offene Welten: Bausteine und die vier Welten |
+| `js/world.js`, `js/worlds.js` | Offene Welten: Bausteine, Mathe-Insel, Weltreise-Flughafen, erste Themenwelten |
+| `js/worlds/*.js` | Weitere Welten (Großstadt, Halloween, Teneriffa, Western, Ritter, Mars, Kontinente) |
+| `js/driving.js` | Autos und Aufträge für den Fahr-Modus |
 | `js/rides.js` | Fahrgeschäfte (Achterbahn, Freifallturm, Piratenschiff, Karussell, Riesenrad, Boot) |
 | `js/animals.js` | Klötzchen-Tiere und ihr Verhalten |
 | `js/blocks.js` | Gemeinsame Noppen-Blöcke, Schilder, Materialien |
