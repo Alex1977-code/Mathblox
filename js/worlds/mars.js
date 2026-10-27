@@ -367,8 +367,24 @@ export const mars = {
     for (const [x, z, hungry, r] of [[-6, 28, true, 4], [6, 12, false, 3], [-24, 22, true, 4], [-30, -8, false, 3], [-4, -2, true, 3], [32, 18, false, 4], [-30, -30, true, 4], [26, -24, false, 3], [-40, 34, true, 3], [40, 4, false, 3]]) {
       w.animal('alien', { pos: V(x, z), behavior: 'hop', radius: r, speed: 1.3, hungry });
     }
+    for (const [x, z] of [[-28, -1], [-24, 15], [10, -14], [-44, -24], [44, 44], [-8, 50]]) w.animal('alien', { pos: V(x, z), radius: 2.5, speed: 0.8 });
+    // kleines Ufo der Marsmännchen kreist über der Basis
+    const ufo = new THREE.Group();
+    const disc = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 2.6, 0.7, 16), plainMat('#c8ced6'));
+    ufo.add(disc);
+    const ring = new THREE.Mesh(new THREE.CylinderGeometry(2.7, 2.7, 0.15, 16), plainMat('#7be07b'));
+    ufo.add(ring);
+    part(ufo, 0.5, 0.5, 0.5, '#7be07b', 0, 0.6, 0);
+    for (const s of [-1, 1]) part(ufo, 0.12, 0.12, 0.05, '#111', s * 0.12, 0.65, 0.26);
+    bake(ufo);
+    for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3; part(ufo, 0.25, 0.2, 0.25, '#ffe14d', Math.cos(a) * 2.2, -0.35, Math.sin(a) * 2.2, '#806a00'); }
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(1.1, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshLambertMaterial({ color: '#bfe8ff', transparent: true, opacity: 0.4 }));
+    cap.position.y = 0.3;
+    ufo.add(cap);
+    w.add(ufo);
+    w.updaters.push((dt, t) => { const a = t * 0.25; ufo.position.set(Math.cos(a) * 26, 22 + Math.sin(t * 1.3) * 1.2, 8 + Math.sin(a) * 22); ufo.rotation.y = t * 1.5; ufo.rotation.z = Math.sin(t) * 0.08; });
     const robo = { '2b2b2b': '#8d97a5', ffffff: '#d0d6de', '111111': '#2fd0ff' };
-    for (const [x, z] of [[8, 30], [-12, 6], [36, -20]]) {
+    for (const [x, z] of [[8, 30], [-12, 6], [36, -20], [-6, -12], [30, 0]]) {
       const a = w.animal('dog', { pos: V(x, z), radius: 4, speed: 1.6 });
       a.g.traverse((o) => { if (!o.isMesh) return; const k = o.material.color.getHexString(); if (robo[k]) o.material = plainMat(robo[k], k === '111111' ? '#1aa0d0' : undefined); });
     }
