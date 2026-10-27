@@ -679,7 +679,7 @@ export const tenerife = {
     w.box(5.4, 0.5, 5.4, '#c0392b', twx, twTop + 0.25, twz);
     w.cone(2.6, 4.5, '#ffd23f', twx, twTop + 0.5, twz, { seg: 8 });
     for (const [ddx, ddz] of [[-2.6, -2.6], [2.6, -2.6], [-2.6, 2.6], [2.6, 2.6]]) w.cone(0.6, 2.4, '#ffd23f', twx + ddx, twTop - 5.5, twz + ddz, { seg: 6, shadow: false });
-    const slidePts = [[twx + 2.6, twTop - 0.4, twz], [twx + 6, twTop - 3, twz - 3], [twx + 9, twTop - 6, twz + 1], [twx + 6, twTop - 9, twz + 5], [twx + 10, wpy + 2, twz + 7], [wpx + 4, wpy + 0.3, wpz + 4]];
+    const slidePts = [[twx + 3.4, twTop + 0.4, twz], [twx + 6, twTop - 3, twz - 3], [twx + 9, twTop - 6, twz + 1], [twx + 6, twTop - 9, twz + 5], [twx + 10, wpy + 2, twz + 7], [wpx + 4, wpy + 0.3, wpz + 4]];
     const slideCurve = new THREE.CatmullRomCurve3(slidePts.map((q) => new THREE.Vector3(...q)));
     for (let k = 0; k <= 40; k++) {
       const p = slideCurve.getPointAt(k / 40), tn = slideCurve.getTangentAt(k / 40);

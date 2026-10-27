@@ -323,8 +323,7 @@ export const southamerica = {
       const d = A('dolphin', x, z, { y: -0.8, behavior: 'jump', radius: 3 });
       d.g.traverse((m) => { if (m.material?.color) { const hx = m.material.color.getHexString(); if (hx === '7b93a8' || hx === '6a8197') m.material = pink; else if (hx === 'e8eef3') m.material = pinkB; } });
     }
-    for (const [x, z] of [[66, 10], [64, 34], [36, -54]]) A('dolphin', x, z, { y: -0.8, behavior: 'jump', radius: 8 });
-    for (let i = 0; i < 3; i++) A('butterfly', w.r(-30, -10), w.r(0, 50), { y: G + 1.5, behavior: 'flutter', radius: 4, color: w.pick(['#3fa9f5', '#ffd23f', '#ff3b7a']) });
+    for (const [x, z] of [[66, 10], [36, -54]]) A('dolphin', x, z, { y: -0.8, behavior: 'jump', radius: 8 });
     w.sign('Rosa Flussdelfine!', -34, G + 4.5, 12, { bg: '#f29cb4', fg: '#17233b', size: 0.7 });
 
     // ---------- Münzen ----------

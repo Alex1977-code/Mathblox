@@ -24,7 +24,7 @@ function height(x, z) {
 
 function color(x, z, h) {
   const n = Math.sin(x * 1.5 + z * 0.8) * Math.cos(z * 1.2 - x * 0.6);
-  if (h <= 0.5) return inLagoon(x, z) ? (n > 0.3 ? '#cdb983' : '#d8c48e') : '#f2e2b0';
+  if (h <= 0.5) return inLagoon(x, z) ? (n > 0.3 ? '#f0e4b8' : '#f6ecc4') : '#f2e2b0';
   if (h > G) return Math.round(x / 2) % 3 === 0 ? '#b8461f' : n > 0.2 ? '#d0602f' : '#c8542a';
   if (x > 2 && x < 18 && z > -36 && z < -18) return '#d8d2c4';
   if (outback(x, z)) return n > 0.35 ? '#c86c38' : n < -0.35 ? '#da8a50' : '#d27a42';
@@ -244,7 +244,7 @@ export const australia = {
     }
 
     // ---------- Korallenriff mit Glasbodenboot ----------
-    const lagoon = w.shape(new THREE.PlaneGeometry(16.5, 64), '#12b0d8', 50.25, 0.95, 8, { rx: -Math.PI / 2, opacity: 0.45, emissive: '#04506e', shadow: false });
+    const lagoon = w.shape(new THREE.PlaneGeometry(16.5, 64), '#0a8fd0', 50.25, 0.95, 8, { rx: -Math.PI / 2, opacity: 0.42, emissive: '#03406a', shadow: false });
     lagoon.material.depthWrite = false;
     const CORAL = ['#ff5f7e', '#ff8a1f', '#b07bff', '#ffd23f', '#3fd0ff', '#ff3b9a', '#7ae05a'];
     for (let i = 0; i < 170; i++) {
@@ -263,8 +263,10 @@ export const australia = {
     const glass = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.05, 2.4), new THREE.MeshLambertMaterial({ color: '#9ff4ff', transparent: true, opacity: 0.55, emissive: '#1a6070' }));
     glass.position.set(0, 0.37, 0.4);
     boat.add(glass);
-    for (const [a, b] of [[1.1, 2], [-1.1, 2], [1.1, -2], [-1.1, -2]]) part(boat, 0.1, 2.6, 0.1, '#ffffff', a, 1.6, b);
-    part(boat, 2.7, 0.15, 4.6, '#ffd23f', 0, 2.95, 0);
+    for (const sx of [-1.25, 1.25]) part(boat, 0.08, 0.08, 4.6, '#ffffff', sx, 1.2, 0);
+    for (const [a, b] of [[1.25, 2.2], [-1.25, 2.2], [1.25, -2.2], [-1.25, -2.2], [1.25, 0], [-1.25, 0]]) part(boat, 0.08, 0.8, 0.08, '#ffffff', a, 0.8, b);
+    part(boat, 0.1, 1.4, 0.1, '#ffffff', 0, 1.2, 2.3);
+    part(boat, 0.8, 0.5, 0.05, '#ffd23f', 0.42, 1.65, 2.3);
     const rpts = [];
     for (let i = 0; i < 14; i++) { const a = Math.PI + (i / 14) * Math.PI * 2; rpts.push([50 + Math.cos(a) * 5.5, 0.9, 8 - Math.sin(a) * 24]); }
     w.addRide(pathRide(w, {
@@ -277,7 +279,7 @@ export const australia = {
 
     // ---------- Eukalyptuswald ----------
     const trees = [];
-    for (const [x, z] of [[12, 18], [20, 26], [28, 16], [14, 40], [26, 44], [34, 30], [-10, 44], [-8, 12], [10, -6], [22, -10], [34, 0], [-6, -26], [-14, -48], [38, 48], [16, 52]]) trees.push([x, z, eucalyptus(x, z, w.r(0.9, 1.2))]);
+    for (const [x, z] of [[12, 18], [20, 26], [28, 16], [14, 40], [26, 44], [34, 30], [-10, 44], [-8, 12], [26, -12], [34, 0], [-6, -26], [-14, -48], [38, 48], [16, 52]]) trees.push([x, z, eucalyptus(x, z, w.r(0.9, 1.2))]);
     w.sign('Eukalyptuswald', 22, G + 4, 32, { bg: '#5f8a6a', size: 0.9 });
 
     // ---------- Tiere ----------

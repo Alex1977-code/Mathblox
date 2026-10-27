@@ -480,7 +480,6 @@ export const northamerica = {
     for (let i = 0; i < 2; i++) A('duck', -48 + i * 2, 4, { y: G + 0.05, behavior: 'swim', radius: 3, speed: 0.7 });
     for (const [x, z] of [[8, -26], [10, -38]]) A('seal', x, z, { y: -0.75, behavior: 'swim', radius: 3, speed: 0.6 });
     A('whale', -24, -78, { y: -0.8, behavior: 'jump', radius: 14 });
-    if (0) for (let i = 0; i < 4; i++) A('butterfly', w.r(-14, 14), w.r(0, 44), { y: G + 1.2, behavior: 'flutter', radius: 4, color: w.pick(['#ff8a1f', '#ffd23f', '#5fb0ff']) });
 
     // ---------- Münzen ----------
     w.coinLine(0, 44, 0, -10, 8, G);
