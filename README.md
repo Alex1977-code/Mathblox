@@ -52,7 +52,7 @@ npm start          # oder: python3 -m http.server 8080
 
 **Online fürs Handy (GitHub Pages):** In den Repository-Einstellungen unter
 *Settings → Pages → Source* „GitHub Actions“ auswählen. Danach baut der Workflow
-`.github/workflows/pages.yml` bei jedem Push auf `main`/`master` die Seite.
+`.github/workflows/pages.yml` bei jedem Push auf den Standard-Branch die Seite.
 Auf dem Handy kann man sie über „Zum Home-Bildschirm hinzufügen“ wie eine App installieren
 (Vollbild, funktioniert dank Service Worker auch offline).
 

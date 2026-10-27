@@ -2,7 +2,7 @@ name: Tests & GitHub Pages
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, claude/mathblox-game]
   pull_request:
   workflow_dispatch:
 
@@ -26,7 +26,8 @@ jobs:
       - run: npm test
 
   deploy:
-    if: github.event_name != 'pull_request'
+    # Nur vom Standard-Branch veröffentlichen (GitHub Pages erlaubt nur diesen)
+    if: github.event_name != 'pull_request' && github.ref_name == github.event.repository.default_branch
     needs: test
     runs-on: ubuntu-latest
     environment:
