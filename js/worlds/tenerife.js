@@ -327,8 +327,9 @@ function road(w, pts, coins = 0) {
       const t = (k + 0.5) / n, x = ax + (bx - ax) * t, z = az + (bz - az) * t;
       const h = w.heightAt(x, z);
       if (h <= 0) continue;
-      w.box(2.4, 0.12, 2.3, '#4a4d52', x, h + 0.04, z, ry);
-      if (k % 2 === 0) w.box(0.15, 0.13, 0.9, '#f2f2f2', x, h + 0.05, z, ry);
+      const lift = (k % 2) * 0.03;
+      w.box(2.4, 0.12, 2.3, '#4a4d52', x, h + 0.04 + lift, z, ry);
+      if (k % 2 === 0) w.box(0.15, 0.13, 0.9, '#f2f2f2', x, h + 0.06, z, ry);
       acc += 2;
       if (coins && acc % coins < 2) w.coin(x, h, z);
     }
@@ -434,10 +435,10 @@ export const tenerife = {
     // Mietwagen am Flughafen: einsteigen und die große Insel erkunden, Aufträge erledigen
     lightHouse(w, ax - 13, az - 6, 6, 3.4, 3, { wall: '#ffd23f', roofColor: '#17233b' });
     sign(w, 'Mietwagen', [ax - 13, az - 6], 5.5, { bg: '#17233b', fg: '#ffd23f' });
-    w.box(14, 0.08, 7, '#5a5f66', ax - 12, ay + 0.05, az - 13);
-    w.car({ x: ax - 17, z: az - 13, kind: 'taxi', ry: Math.PI });
+    w.box(20, 0.08, 7, '#5a5f66', ax - 12, ay + 0.05, az - 13);
+    w.car({ x: ax - 20, z: az - 13, kind: 'taxi', ry: Math.PI });
     w.car({ x: ax - 13, z: az - 13, kind: 'sport', ry: Math.PI });
-    w.car({ x: ax - 9, z: az - 13, kind: 'monster', ry: Math.PI });
+    w.car({ x: ax - 6, z: az - 13, kind: 'monster', ry: Math.PI });
     w.star('rental', ax - 13, ay + 16, az - 6, 'Mietwagen-Profi');
     w.car({ x: P.santaCruz[0] - 10, z: P.santaCruz[1] - 4, kind: 'police', ry: Math.PI / 2 });
     w.car({ x: P.puerto[0] + 12, z: P.puerto[1] - 6, kind: 'pizza', ry: Math.PI });
@@ -605,8 +606,8 @@ export const tenerife = {
       const ry = Math.atan2(ux, uz);
       for (let k = 0; k <= L; k += 3) {
         const x = a[0] + ux * k, z = a[1] + uz * k;
-        w.box(4, 0.3, 3.2, '#f2c94c', x + nx * 1, 0.45, z + nz * 1, ry);
-        w.box(4, 0.3, 3.2, '#f2c94c', x + nx * 4, 0.15, z + nz * 4, ry);
+        w.box(3, 0.3, 3, '#f2c94c', x + nx * 1, 0.45, z + nz * 1, ry);
+        w.box(3, 0.3, 3, '#f2c94c', x + nx * 4, 0.15, z + nz * 4, ry);
         if (k % 6 === 0) w.box(3.6, 1.4, 1.6, '#7a7470', x + nx * 13, 0.2, z + nz * 13, ry);
         if (k % 6 === 3) { w.box(0.12, 2, 0.12, '#ffffff', x + nx * 2.5, 1.4, z + nz * 2.5); w.cone(1.1, 0.6, k % 4 ? '#ff595e' : '#2f7df6', x + nx * 2.5, 2.2, z + nz * 2.5, { seg: 8, shadow: false }); }
       }
@@ -804,7 +805,7 @@ export const tenerife = {
     for (const sg of [-1, 1]) w.block(wpx + sg * 2.6, wpy + 4, wpz - 11, 0.9, 4, 0.9, '#c0392b', { plain: true });
     thaiRoof(w, wpx, wpy + 4, wpz - 11, 6.4, 2.4);
     for (const sg of [-1, 1]) elephantStatue(w, wpx + sg * 6, wpy, wpz - 12);
-    for (const [x, z, ww, dd] of [[0, -9.6, 22.8, 1.6], [0, 9.6, 22.8, 1.6], [-11.4, 0, 1.6, 20.8], [11.4, 0, 1.6, 20.8]]) w.water(wpx + x, wpz + z, ww, dd, { top: wpy + 0.14, color: '#2fc4e8' });
+    for (const [x, z, ww, dd] of [[0, -9.6, 22.8, 1.6], [0, 9.6, 22.8, 1.6], [-11.4, 0, 1.6, 17.6], [11.4, 0, 1.6, 17.6]]) w.water(wpx + x, wpz + z, ww, dd, { top: wpy + 0.14, color: '#2fc4e8' });
     for (let k = 0; k < 6; k++) w.box(1.4, 0.5, 1.4, '#ffd23f', wpx - 10 + k * 4, wpy + 0.3, wpz + 9.6);
 
     // Einkaufszentrum im Thai-Stil gleich nebenan
@@ -1059,7 +1060,7 @@ export const tenerife = {
         for (const [n, y] of [[-1.5, null], [1.5, 0.3], [4.5, 0.05]]) {
           const [x, z] = at(t, n), h = w.heightAt(x, z);
           if (y === null && h > 3) continue;
-          w.box(3.2, 0.3, 3.2, sand, x, (y ?? Math.max(0.5, h) + 0.1) - 0.15, z, ry);
+          w.box(3, 0.3, 3, sand, x, (y ?? Math.max(0.5, h) + 0.1) - 0.15, z, ry);
         }
         const k = Math.round(t / 3);
         if (!b.wild && k % 2 === 0) {

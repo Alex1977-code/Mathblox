@@ -60,7 +60,7 @@ skyTex.colorSpace = THREE.SRGBColorSpace;
 scene.background = skyTex;
 scene.fog = new THREE.Fog('#bfe3ff', 70, 170);
 
-const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 500);
+const camera = new THREE.PerspectiveCamera(60, 1, 0.3, 500); // near 0.3: genauerer Tiefenpuffer, weniger Flackern
 const hemi = new THREE.HemisphereLight('#ffffff', '#6d8fb0', 1.6);
 scene.add(hemi);
 const sun = new THREE.DirectionalLight('#fff4e0', 2.2);
@@ -69,6 +69,12 @@ sun.shadow.mapSize.set(1024, 1024);
 Object.assign(sun.shadow.camera, { left: -24, right: 24, top: 24, bottom: -24, near: 1, far: 90 });
 sun.shadow.bias = -0.0008;
 scene.add(sun, sun.target);
+// Schattenkamera nur in ganzen Schatten-Pixeln verschieben, sonst flimmern die Schattenkanten beim Laufen
+const SUN_OFFSET = new THREE.Vector3(14, 30, 10);
+const sunBasis = new THREE.Matrix4().lookAt(SUN_OFFSET, new THREE.Vector3(), new THREE.Vector3(0, 1, 0));
+const sunBasisInv = sunBasis.clone().transpose();
+const SHADOW_TEXEL = 48 / 1024;
+const sunFocus = new THREE.Vector3();
 
 const sea = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), new THREE.MeshLambertMaterial({ color: '#3a8fd8' }));
 sea.rotation.x = -Math.PI / 2;
@@ -396,10 +402,14 @@ function resetCar(c) {
 
 function nearestCar() {
   if (!stage.cars) return null;
-  let best = null, bd = 3.4;
+  // Autos, die man schon fahren darf (gratis oder gekauft), haben Vorrang vor Kauf-Autos daneben
+  let best = null, bd = Infinity;
   for (const c of stage.cars) {
     const d = Math.hypot(c.group.position.x - player.pos.x, c.group.position.z - player.pos.z);
-    if (d < bd && Math.abs(c.group.position.y - player.pos.y) < 2) { bd = d; best = c; }
+    if (d > 4 || Math.abs(c.group.position.y - player.pos.y) > 2.5) continue;
+    const usable = !c.type.price || save.owned.includes(`car:${c.kind}`);
+    const score = d + (usable ? 0 : 3);
+    if (score < bd) { bd = score; best = c; }
   }
   return best;
 }
@@ -653,8 +663,12 @@ function updateCamera(dt, snap = false) {
     camera.lookAt(lookAt);
   }
   const focus = state === 'ride' ? seatPos : player.pos;
-  sun.position.copy(focus).add(new THREE.Vector3(14, 30, 10));
-  sun.target.position.copy(focus);
+  sunFocus.copy(focus).applyMatrix4(sunBasisInv);
+  sunFocus.x = Math.round(sunFocus.x / SHADOW_TEXEL) * SHADOW_TEXEL;
+  sunFocus.y = Math.round(sunFocus.y / SHADOW_TEXEL) * SHADOW_TEXEL;
+  sunFocus.applyMatrix4(sunBasis);
+  sun.position.copy(sunFocus).add(SUN_OFFSET);
+  sun.target.position.copy(sunFocus);
 }
 
 // ---------- Level & Welten laden ----------
@@ -1275,7 +1289,8 @@ function pause() {
   show('hud', 'pause');
 }
 $('btn-pause').addEventListener('click', pause);
-$('btn-action').addEventListener('click', pressAction);
+// pointerdown statt click: auf dem Handy kommt „click“ nicht an, solange der andere Daumen den Joystick hält
+$('btn-action').addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); pressAction(); });
 window.addEventListener('keydown', (e) => { if ((e.key === 'e' || e.key === 'E' || e.key === 'Enter') && state === 'play') pressAction(); });
 $('btn-resume').addEventListener('click', () => { setState('play'); show('hud'); });
 $('btn-respawn').addEventListener('click', () => { respawn(); setState('play'); show('hud'); });

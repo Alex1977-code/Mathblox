@@ -249,7 +249,7 @@ button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
   position: absolute;
   right: calc(max(24px, env(safe-area-inset-right, 0px)) + 120px);
   bottom: calc(max(24px, env(safe-area-inset-bottom, 0px)) + 40px);
-  min-width: 112px; height: 52px; padding: 0 16px; border-radius: 26px;
+  min-width: 132px; height: 60px; padding: 0 18px; border-radius: 30px;
   background: var(--blue); color: #fff; font-family: var(--font-display); font-weight: 700; font-size: 1.05rem;
   border-bottom: 5px solid var(--blue-dark); pointer-events: auto; touch-action: manipulation;
 }
