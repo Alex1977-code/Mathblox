@@ -7,6 +7,7 @@ import { ANIMAL_NAMES } from './animals.js';
 import { CAR_TYPES, targetBeacon, guideArrow, makePerson, makeCar } from './driving.js';
 import { Avatar, SHOP, DEFAULT_OUTFIT } from './avatar.js';
 import { Input } from './controls.js';
+import { Minimap } from './minimap.js';
 import { sfx, unlockAudio, setMuted, vibrate } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
@@ -323,28 +324,29 @@ function stepPlayer(dt) {
 }
 
 // ---------- Autofahren ----------
+// Pedale (nur beim Fahren sichtbar), getrennt vom Lenken – mehrere Finger gleichzeitig möglich
+const pedals = { gas: false, brake: false };
+for (const [id, key] of [['btn-gas', 'gas'], ['btn-brake', 'brake']]) {
+  const el = $(id);
+  const on = (e) => { e.preventDefault(); e.stopPropagation(); pedals[key] = true; el.classList.add('down'); try { el.setPointerCapture(e.pointerId); } catch { /* egal */ } };
+  const off = () => { pedals[key] = false; el.classList.remove('down'); };
+  el.addEventListener('pointerdown', on);
+  for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) el.addEventListener(ev, off);
+}
+
 function stepCar(dt) {
   const c = driving, t = c.type;
   const mv = input.getMove();
-  const mag = Math.min(1, Math.hypot(mv.x, mv.y));
-  // Lenken wie beim Laufen: Der Joystick zeigt die Richtung auf dem Bildschirm, das Auto dreht sich dorthin
-  // und fährt los. Joystick nach hinten (aus dem Stand): rückwärts.
-  let targetSpeed = 0;
-  if (mag > 0.15) {
-    const dx = -Math.sin(cam.yaw) * mv.y + Math.cos(cam.yaw) * mv.x;
-    const dz = -Math.cos(cam.yaw) * mv.y - Math.sin(cam.yaw) * mv.x;
-    const want = Math.atan2(dx, dz);
-    const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
-    let diff = wrap(want - c.heading);
-    const reverse = c.speed < 3 && Math.abs(diff) > (c.speed < -0.5 ? 1.6 : 2.5);
-    if (reverse) diff = wrap(want + Math.PI - c.heading);
-    const turn = t.turn * 1.3 * dt * Math.min(1, 0.4 + Math.abs(c.speed) / 8);
-    c.heading += Math.sign(diff) * Math.min(Math.abs(diff), turn);
-    targetSpeed = reverse ? -t.max * 0.35 * mag : t.max * mag * Math.max(0.3, Math.cos(Math.min(Math.abs(diff), 1.3)));
-  }
-  const braking = targetSpeed * c.speed < 0 || targetSpeed === 0;
-  const rate = braking ? 18 : t.acc;
-  c.speed += THREE.MathUtils.clamp(targetSpeed - c.speed, -rate * dt, rate * dt);
+  // Wie im Kart-Spiel: Joystick links/rechts lenkt, Gas und Bremse sind eigene Knöpfe
+  // (am PC: W/↑ Gas, S/↓ Bremse bzw. rückwärts, A/D lenken)
+  const gas = pedals.gas || mv.y > 0.5, brake = pedals.brake || mv.y < -0.5;
+  if (gas && !brake) c.speed += (c.speed < -0.5 ? 30 : t.acc) * dt;
+  else if (brake && !gas) c.speed -= (c.speed > 0.5 ? 30 : t.acc * 0.6) * dt;
+  else c.speed -= Math.sign(c.speed) * Math.min(Math.abs(c.speed), 6 * dt);
+  c.speed = THREE.MathUtils.clamp(c.speed, -t.max * 0.4, t.max);
+  const steer = Math.abs(mv.x) > 0.08 ? mv.x : 0;
+  const grip = Math.abs(c.speed) < 0.3 ? 0 : Math.sign(c.speed) * Math.min(1, 0.35 + Math.abs(c.speed) / 9);
+  c.heading -= steer * t.turn * dt * grip;
   player.vel.x = Math.sin(c.heading) * c.speed;
   player.vel.z = Math.cos(c.heading) * c.speed;
   if (input.consumeJump() && player.grounded) { player.vel.y = t.hop || 9; player.grounded = false; sfx.jump(); }
@@ -359,7 +361,15 @@ function stepCar(dt) {
     landed = moveAxis('y', player.vel.y * h, wasGrounded) || (player.vel.y === 0 ? landed : null);
   }
   R = 0.4; H = 2.3;
-  if (before > 2 && Math.hypot(player.vel.x, player.vel.z) < before * 0.5) { c.speed *= -0.3; sfx.land(); vibrate(40); }
+  if (before > 2 && Math.hypot(player.vel.x, player.vel.z) < before * 0.5) {
+    c.speed *= -0.3; sfx.land(); vibrate(40);
+    // Lieferungen sind empfindlich: Zusammenstoß kostet Zeit
+    if (mission && (mission.m.type === 'pizza' || mission.m.type === 'taxi') && before > 6 && time - (mission.lastCrash || -9) > 1) {
+      mission.lastCrash = time;
+      mission.time -= 3;
+      toast(mission.m.type === 'pizza' ? 'Pizza verrutscht! −3 s' : 'Fahrgast erschrocken! −3 s', 1200);
+    }
+  }
   player.grounded = !!landed;
   player.ground = landed;
   safeTimer -= dt;
@@ -448,11 +458,31 @@ function updateActionButton() {
   }
   btn.hidden = !label;
   if (label && btn.textContent !== label) btn.textContent = label;
+  // Beim Fahren: Gas/Bremse statt Sprungknopf
+  $('hud').classList.toggle('driving', !!driving);
+  $('btn-gas').hidden = $('btn-brake').hidden = !driving;
+  if (!driving) pedals.gas = pedals.brake = false;
 }
 function pressAction() {
   if (state !== 'play') return;
   if (driving) exitCar();
   else if (actionCar) enterCar(actionCar);
+}
+
+// ---------- Mini-Karte ----------
+const minimap = new Minimap(renderer, $('minimap'));
+const MISSION_COLORS = { taxi: '#ffc531', pizza: '#ff7a1a', race: '#4cc9f0', police: '#7a9cff' };
+function drawMinimap() {
+  if (!stage?.isWorld || state !== 'play') return;
+  minimap.draw(time, {
+    player: player.pos,
+    heading: driving ? driving.heading : player.facing,
+    target: mission && !mission.speeder ? missionTarget() : null,
+    speeder: mission?.speeder?.car.group.position,
+    starts: mission ? [] : (stage.missions || []).map((m) => ({ x: m.start.x, z: m.start.z, color: MISSION_COLORS[m.type] || '#ffc531' })),
+    cars: driving ? [] : (stage.cars || []).map((c) => c.group.position),
+    stars: stage.stars.filter((st) => !st.got).map((st) => st.pos),
+  });
 }
 
 // ---------- Aufträge ----------
@@ -463,23 +493,41 @@ passenger.visible = false;
 scene.add(beacon, arrow, passenger);
 let speederCurve = null;
 
+const pickOne = (a) => a[Math.floor(Math.random() * a.length)];
 function startMission(m) {
-  mission = { m, idx: 0, time: m.time || 60, speeder: null };
+  let stages = m.stages, time = m.time || 60, reward = m.reward || 30;
+  // Zufällige Ziele (stops: [x, z, Name]): jedes Mal eine andere Tour, Zeit nach Strecke
+  if (m.stops) {
+    const pool = [...m.stops], n = m.type === 'taxi' ? 2 : (m.count || 3);
+    const picked = [];
+    while (picked.length < n && pool.length) picked.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+    stages = picked.map(([x, z, name], i) => (m.type === 'taxi'
+      ? { at: [x, z], text: i === 0 ? `Hol den Fahrgast bei ${name} ab` : `Bring ihn zu: ${name}`, person: i === 0 }
+      : { at: [x, z], text: `Pizza ${i + 1}/${n}: ${name}` }));
+    let px = m.start.x, pz = m.start.z, dist = 0;
+    for (const st of stages) { dist += Math.hypot(st.at[0] - px, st.at[1] - pz); [px, pz] = st.at; }
+    time = Math.round(dist / (m.pace || 9) + 5 * stages.length + 5);
+    reward = (m.reward || 20) + stages.length * 10;
+  }
+  mission = { m, stages, idx: 0, time, reward, speeder: null };
   if (m.type === 'police') {
-    const pts = m.path.map(([x, z]) => new THREE.Vector3(x, stage.heightAt(x, z), z));
-    speederCurve = new THREE.CatmullRomCurve3(pts, true);
-    const car = makeCar('sport', '#8b5cf6');
+    // Raser fährt jedes Mal eine andere Strecke (route()), etwas anderes Tempo und von einer anderen Stelle aus
+    const r = m.route ? m.route() : { points: m.path, closed: true };
+    const pts = r.points.map(([x, z]) => new THREE.Vector3(x, stage.heightAt(x, z), z));
+    speederCurve = new THREE.CatmullRomCurve3(pts, r.closed !== false, 'catmullrom', 0.3);
+    const car = makeCar('sport', pickOne(['#8b5cf6', '#ff2d95', '#00c2a8', '#ff7a1a']));
     stage.add(car.group);
-    mission.speeder = { car, u: 0, L: speederCurve.getLength() };
+    mission.speeder = { car, u: Math.random(), dir: Math.random() < 0.5 ? 1 : -1, closed: r.closed !== false, L: speederCurve.getLength(), speed: (m.speed || 14) * (0.9 + Math.random() * 0.3) };
   }
   sfx.open();
   updateMissionHud();
+  if (stages?.[0]) toast(stages[0].text, 1800);
 }
 
 function missionTarget() {
   const mi = mission;
   if (mi.speeder) return mi.speeder.car.group.position;
-  const [x, z] = mi.m.stages[mi.idx].at;
+  const [x, z] = mi.stages[mi.idx].at;
   return new THREE.Vector3(x, stage.heightAt(x, z), z);
 }
 
@@ -492,10 +540,9 @@ function endMissionVisuals() {
 }
 
 function completeMission() {
-  const m = mission.m;
+  const m = mission.m, reward = mission.reward || m.reward || 30;
   endMissionVisuals();
   mission = null;
-  const reward = m.reward || 30;
   addCoins(reward);
   run.coins += reward;
   sfx.win();
@@ -530,18 +577,20 @@ function updateMission(dt) {
   const mi = mission;
   if (mi.speeder) {
     const sp = mi.speeder;
-    sp.u = (sp.u + (mi.m.speed || 14) * dt / sp.L) % 1;
+    sp.u += sp.dir * sp.speed * dt / sp.L;
+    if (sp.closed) sp.u = ((sp.u % 1) + 1) % 1;
+    else if (sp.u > 1 || sp.u < 0) { sp.dir = -sp.dir; sp.u = THREE.MathUtils.clamp(sp.u, 0, 1); } // offene Strecke: hin und zurück
     const p = speederCurve.getPointAt(sp.u);
     p.y = Math.max(p.y, stage.heightAt(p.x, p.z));
     sp.car.group.position.copy(p);
-    sp.car.group.lookAt(p.clone().add(speederCurve.getTangentAt(sp.u).setY(0)));
+    sp.car.group.lookAt(p.clone().add(speederCurve.getTangentAt(sp.u).setY(0).multiplyScalar(sp.dir)));
     for (const wh of sp.car.wheels) wh.rotation.x += dt * 20;
   }
   const target = missionTarget();
   const d = Math.hypot(target.x - player.pos.x, target.z - player.pos.z);
   beacon.visible = !mi.speeder;
   beacon.position.copy(target);
-  const st = mi.speeder ? null : mi.m.stages[mi.idx];
+  const st = mi.speeder ? null : mi.stages[mi.idx];
   passenger.visible = !!st?.person;
   if (st?.person) { passenger.position.copy(target); passenger.rotation.y += dt; }
   arrow.visible = true;
@@ -551,8 +600,8 @@ function updateMission(dt) {
     if (mi.speeder) return completeMission();
     sfx.coin();
     mi.idx++;
-    if (mi.idx >= mi.m.stages.length) return completeMission();
-    toast(mi.m.stages[mi.idx].text, 1500);
+    if (mi.idx >= mi.stages.length) return completeMission();
+    toast(mi.stages[mi.idx].text, 1500);
   }
   updateMissionHud(d);
 }
@@ -561,7 +610,7 @@ function updateMissionHud(d) {
   const el = $('hud-mission');
   if (!mission) { el.hidden = true; return; }
   const mi = mission, secs = Math.max(0, Math.ceil(mi.time));
-  const text = mi.speeder ? 'Hol den Raser ein!' : mi.m.stages[mi.idx].text;
+  const text = mi.speeder ? 'Hol den Raser ein!' : mi.stages[mi.idx].text;
   el.hidden = false;
   el.innerHTML = `<b>${mi.m.label}</b> · ${text}<span>${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}${d ? ` · ${Math.round(d)} m` : ''}</span>`;
   el.classList.toggle('hurry', secs <= 10);
@@ -721,6 +770,8 @@ function loadWorld(id) {
   respawn();
   player.facing = stage.spawnYaw + Math.PI;
   Object.assign(cam, { yaw: stage.spawnYaw, pitch: 0.32, dist: 10 });
+  stage.playerPos = player.pos; // für Verkehr, der vor dem Spieler anhält
+  minimap.build(scene, stage, [sea, stage.root], def.theme?.sea || '#3a8fd8');
   save.place = id;
   persist();
   updateHud();
@@ -761,6 +812,7 @@ const MAX_STARS = THEME_WORLDS.reduce((s, id) => s + Object.keys(WORLDS[id].star
 
 function updateHud() {
   $('hud-coins').textContent = save.coins;
+  $('minimap').hidden = !stage.isWorld;
   const gates = $('hud-gates');
   if (stage.isWorld) {
     $('hud-level').textContent = stage.name;
@@ -1366,6 +1418,7 @@ function frame(now) {
     }
     updateCamera(dt);
     updateActionButton();
+    drawMinimap();
   }
   updateConfetti(dt);
   renderer.render(scene, camera);

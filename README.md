@@ -32,8 +32,13 @@ jedes Portal verlangt eine **Eintrittskarte**: eine richtig gelöste Aufgabe.
 **Fahr-Modus:** In der Großstadt und auf Teneriffa stehen Autos (Taxi, Polizei, Pizza-Flitzer gratis,
 Sportwagen und Monstertruck gegen Münzen). Mit „Einsteigen“ (oder `E`) fährt man los und erledigt
 Aufträge: Fahrgäste bringen, Pizza liefern, Rennen fahren, Raser stoppen – ganz ohne Gewalt.
-Gelenkt wird wie beim Laufen: Der Joystick zeigt die Richtung, das Auto dreht sich dorthin und fährt los;
-Joystick nach hinten aus dem Stand fährt rückwärts. Abgestellte Autos sind fest (man kann aufs Dach springen).
+Gefahren wird wie im Kart-Spiel: Joystick links/rechts lenkt, Gas- und Brems-Knopf sind getrennt
+(Bremse im Stand = rückwärts; am PC W/S und A/D). Lieferungen und Taxifahrten führen jedes Mal zu anderen,
+zufälligen Zielen, die Zeit richtet sich nach der Strecke, Zusammenstöße kosten Zeit. Der Raser fährt jedes Mal
+eine andere Strecke. Autos, Verkehr und Säulen sind fest.
+
+**Mini-Karte:** In allen offenen Welten zeigt eine Karte oben links die Draufsicht mit Spieler, Auftragszielen,
+Autos und noch fehlenden Sternen. Antippen vergrößert sie.
 
 **Teneriffa** ist nach echten Koordinaten gebaut (1 Einheit ≈ 133 m): Teide und Las Cañadas, Anaga,
 Teno, Masca, über 35 Orte von Santa Cruz bis Los Gigantes, Straßen mit Linienbus und viele Ausflugsziele –

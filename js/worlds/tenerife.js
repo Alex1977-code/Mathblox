@@ -443,16 +443,22 @@ export const tenerife = {
     w.car({ x: P.santaCruz[0] - 10, z: P.santaCruz[1] - 4, kind: 'police', ry: Math.PI / 2 });
     w.car({ x: P.puerto[0] + 12, z: P.puerto[1] - 6, kind: 'pizza', ry: Math.PI });
     w.car({ x: P.parador[0] + 7, z: P.parador[1] + 3, kind: 'taxi', ry: 0 });
-    w.mission({ type: 'taxi', label: 'Taxi zum Strand', start: [ax - 4, az - 22], time: 90, reward: 40,
-      stages: [{ at: [ax + 2, az - 16], text: 'Hol die Urlauberin am Terminal ab', person: true }, { at: [P.cristianos[0] + 4, P.cristianos[1] - 6], text: 'Fahr sie nach Los Cristianos' }] });
+    // Ziele an den Straßen; jede Tour wählt zufällig andere (Zeit richtet sich nach der Strecke)
+    const SOUTH = [[...P.cristianos, 'Los Cristianos'], [...P.americas, 'Playa de las Américas'], [...P.adeje, 'Adeje'], [...P.caleta, 'La Caleta'],
+      [...P.callao, 'Callao Salvaje'], [...P.granadilla, 'Granadilla'], [...P.sanIsidro, 'San Isidro'], [...P.airport, 'Flughafen Süd'], [...P.vilaflor, 'Vilaflor'], [...P.arico, 'Arico']];
+    const NORTH = [[...P.orotava, 'La Orotava'], [...P.puerto, 'Puerto de la Cruz'], [...P.icod, 'Icod'], [...P.garachico, 'Garachico'], [...P.laguna, 'La Laguna'],
+      [...geo(-16.49, 28.43), 'Santa Úrsula'], [...geo(-16.41, 28.47), 'Tacoronte'], [...geo(-16.62, 28.388), 'Los Realejos'], [...P.tanque, 'El Tanque']];
+    const EAST = [[...P.santaCruz, 'Santa Cruz'], [...P.laguna, 'La Laguna'], [...P.tegueste, 'Tegueste'], [...P.candelaria, 'Candelaria'], [...P.bajamar, 'Bajamar'], [...P.cruzCarmen, 'Cruz del Carmen']];
+    w.mission({ type: 'taxi', label: 'Inseltaxi Süd', start: [ax - 4, az - 22], stops: SOUTH, pace: 11, reward: 25 });
     w.mission({ type: 'race', label: 'Rallye Las Cañadas', start: [P.parador[0] + 6, P.parador[1] - 4], time: 120, reward: 60,
       stages: [{ at: P.tauce, text: 'Checkpoint Boca de Tauce' }, { at: [P.cableBase[0] + 4, P.cableBase[1] + 4], text: 'Checkpoint Seilbahn' }, { at: P.portillo, text: 'Checkpoint El Portillo' }, { at: [P.parador[0] + 6, P.parador[1] + 6], text: 'Ziel: Parador' }] });
-    w.mission({ type: 'pizza', label: 'Pizza für La Orotava', start: [P.puerto[0] + 12, P.puerto[1] - 11], time: 75, reward: 40,
-      stages: [{ at: [P.orotava[0] + 2, P.orotava[1] + 8], text: 'Liefere die Pizza nach La Orotava' }, { at: [P.realejos[0], P.realejos[1] + 6], text: 'Noch eine nach Los Realejos' }] });
-    w.mission({ type: 'taxi', label: 'Taxi zur Altstadt', start: [P.santaCruz[0] - 10, P.santaCruz[1] - 10], time: 80, reward: 40,
-      stages: [{ at: [P.santaCruz[0] - 4, P.santaCruz[1] - 12], text: 'Hol den Fahrgast am Hafen ab', person: true }, { at: [P.laguna[0] - 8, P.laguna[1] + 10], text: 'Bring ihn nach La Laguna' }] });
-    w.mission({ type: 'police', label: 'Raser an der Küste', start: [P.americas[0] + 14, P.americas[1] - 16], time: 70, reward: 50, speed: 13,
-      path: [[P.americas[0] + 10, P.americas[1] - 20], [P.cristianos[0] + 16, P.cristianos[1] - 18], [P.airport[0] - 30, P.airport[1] - 14], [P.cristianos[0] + 22, P.cristianos[1] - 28], [P.adeje[0] + 6, P.adeje[1] + 6]] });
+    w.mission({ type: 'pizza', label: 'Pizza-Tour Nord', start: [P.puerto[0] + 12, P.puerto[1] - 11], stops: NORTH, count: 3, pace: 11, reward: 25 });
+    w.mission({ type: 'pizza', label: 'Pizza-Tour Süd', start: [P.cristianos[0] + 6, P.cristianos[1] - 14], stops: SOUTH, count: 3, pace: 11, reward: 25 });
+    w.mission({ type: 'taxi', label: 'Stadttaxi Santa Cruz', start: [P.santaCruz[0] - 10, P.santaCruz[1] - 10], stops: EAST, pace: 10, reward: 25 });
+    // Raser: jedes Mal ein anderes Stück Küstenstraße im Süden, hin und zurück
+    const southRoads = [ROADS[0].slice(6), ROADS[7], ROADS[3].slice(0, 3), ROADS[0].slice(4, 9), ROADS[9].slice(0, 3)];
+    w.mission({ type: 'police', label: 'Raser an der Küste', start: [P.americas[0] + 14, P.americas[1] - 16], time: 75, reward: 50, speed: 13,
+      route: () => { const r = southRoads[Math.floor(Math.random() * southRoads.length)]; return { points: Math.random() < 0.5 ? [...r] : [...r].reverse(), closed: false }; } });
 
     // Straßen mit Münzen, Guagua (Linienbus) auf der TF-1
     ROADS.forEach((r, i) => road(w, r, i === 2 ? 14 : 22));
@@ -579,6 +585,7 @@ export const tenerife = {
       clouds.setMatrixAt(ci++, m4);
     }
     clouds.count = ci;
+    clouds.userData.noMap = true; // Mini-Karte ohne Wolkendecke
     clouds.computeBoundingSphere();
     w.add(clouds);
     w.updaters.push((dt, t) => { clouds.position.x = Math.sin(t * 0.05) * 6; });
