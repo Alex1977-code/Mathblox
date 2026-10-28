@@ -184,7 +184,7 @@ function overlaps(min, max) {
   const p = player.pos;
   return p.x + R > min.x && p.x - R < max.x && p.y + H > min.y && p.y < max.y && p.z + R > min.z && p.z - R < max.z;
 }
-const solidActive = (s) => !s.gone;
+const solidActive = (s) => !s.gone && (!s.car || s.car !== driving); // eigenes Auto beim Fahren ignorieren
 
 function moveAxis(axis, d, wasGrounded) {
   const p = player.pos;
@@ -326,13 +326,25 @@ function stepPlayer(dt) {
 function stepCar(dt) {
   const c = driving, t = c.type;
   const mv = input.getMove();
-  const throttle = mv.y, steer = mv.x;
-  if (Math.abs(throttle) > 0.05) {
-    const braking = throttle * c.speed < 0;
-    c.speed += throttle * (braking ? 30 : t.acc) * dt;
-  } else c.speed *= 1 - Math.min(1, 1.6 * dt);
-  c.speed = THREE.MathUtils.clamp(c.speed, -t.max * 0.4, t.max);
-  c.heading -= steer * t.turn * dt * THREE.MathUtils.clamp(c.speed / 7, -1, 1);
+  const mag = Math.min(1, Math.hypot(mv.x, mv.y));
+  // Lenken wie beim Laufen: Der Joystick zeigt die Richtung auf dem Bildschirm, das Auto dreht sich dorthin
+  // und fährt los. Joystick nach hinten (aus dem Stand): rückwärts.
+  let targetSpeed = 0;
+  if (mag > 0.15) {
+    const dx = -Math.sin(cam.yaw) * mv.y + Math.cos(cam.yaw) * mv.x;
+    const dz = -Math.cos(cam.yaw) * mv.y - Math.sin(cam.yaw) * mv.x;
+    const want = Math.atan2(dx, dz);
+    const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+    let diff = wrap(want - c.heading);
+    const reverse = c.speed < 3 && Math.abs(diff) > (c.speed < -0.5 ? 1.6 : 2.5);
+    if (reverse) diff = wrap(want + Math.PI - c.heading);
+    const turn = t.turn * 1.3 * dt * Math.min(1, 0.4 + Math.abs(c.speed) / 8);
+    c.heading += Math.sign(diff) * Math.min(Math.abs(diff), turn);
+    targetSpeed = reverse ? -t.max * 0.35 * mag : t.max * mag * Math.max(0.3, Math.cos(Math.min(Math.abs(diff), 1.3)));
+  }
+  const braking = targetSpeed * c.speed < 0 || targetSpeed === 0;
+  const rate = braking ? 18 : t.acc;
+  c.speed += THREE.MathUtils.clamp(targetSpeed - c.speed, -rate * dt, rate * dt);
   player.vel.x = Math.sin(c.heading) * c.speed;
   player.vel.z = Math.cos(c.heading) * c.speed;
   if (input.consumeJump() && player.grounded) { player.vel.y = t.hop || 9; player.grounded = false; sfx.jump(); }
@@ -354,6 +366,7 @@ function stepCar(dt) {
   if (landed && landed.safe && safeTimer <= 0) { safeTimer = 0.4; (player.lastSafe ??= new THREE.Vector3()).copy(player.pos); }
   c.group.position.copy(player.pos);
   c.group.rotation.y = c.heading;
+  stage.updateCarSolid(c);
   player.facing = c.heading;
   for (const wh of c.wheels) wh.rotation.x += c.speed * dt * 2;
 }
@@ -385,7 +398,7 @@ function exitCar(place = true) {
   driving = null;
   if (place) {
     const left = new THREE.Vector3(Math.cos(c.heading), 0, -Math.sin(c.heading));
-    player.pos.addScaledVector(left, 2.4);
+    player.pos.addScaledVector(left, 3);
     player.pos.y = Math.max(player.pos.y, stage.heightAt ? stage.heightAt(player.pos.x, player.pos.z) : 0);
   }
   player.vel.set(0, 0, 0);
@@ -399,6 +412,7 @@ function resetCar(c) {
   c.group.rotation.y = c.home.ry;
   c.heading = c.home.ry;
   c.speed = 0;
+  stage.updateCarSolid(c);
 }
 
 function nearestCar() {
@@ -1329,6 +1343,7 @@ function frame(now) {
       cam.dist = state === 'shop' ? 6 : 9;
       player.facing = cam.yaw;
     }
+    avatar.group.visible = !driving; // im Auto sitzt man hinter den Scheiben, sonst ragt der Kopf durchs Dach
     if (driving) {
       driving.seat.getWorldPosition(seatPos);
       avatar.group.position.copy(seatPos);

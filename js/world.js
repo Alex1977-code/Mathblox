@@ -614,8 +614,19 @@ export class World {
     c.home = { pos: new THREE.Vector3(x, y, z), ry };
     c.heading = ry;
     c.speed = 0;
+    // Abgestellte Autos sind fest: man läuft nicht hindurch, kann aber aufs Dach springen
+    c.solid = { min: new THREE.Vector3(), max: new THREE.Vector3(), car: c };
+    this.updateCarSolid(c);
+    this.solids.push(c.solid);
     this.cars.push(c);
     return c;
+  }
+
+  updateCarSolid(c) {
+    const p = c.group.position, h = c.heading, hw = 1.0, hl = 2.0;
+    const ex = Math.abs(Math.cos(h)) * hw + Math.abs(Math.sin(h)) * hl, ez = Math.abs(Math.sin(h)) * hw + Math.abs(Math.cos(h)) * hl;
+    c.solid.min.set(p.x - ex, p.y, p.z - ez);
+    c.solid.max.set(p.x + ex, p.y + (c.kind === 'monster' ? 2.9 : 1.9), p.z + ez);
   }
 
   /**
