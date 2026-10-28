@@ -423,7 +423,8 @@ export const knights = {
     for (let i = 0; i < 3; i++) w.animal('goat', { pos: V(22 + i * 2, -14 - i * 2), radius: 4, speed: 0.8, hungry: i === 0 });
     for (let i = 0; i < 3; i++) w.animal('duck', { pos: new THREE.Vector3(-8 + i * 7, HT - 0.3, -17), y: HT - 0.3, behavior: 'swim', radius: 1.2, speed: 0.6, hungry: i === 1 });
     w.animal('bird', { pos: new THREE.Vector3(0, 0, -33), y: peak + 4, behavior: 'fly', radius: 9, speed: -4, colors: ['#8a5a2b', '#5b3a1e', '#e8d8c8'], scale: 1.3 });
-    w.animal('bird', { pos: new THREE.Vector3(2.6, peak, -35.6), y: peak + 4.1, behavior: 'perch', colors: ['#8a5a2b', '#5b3a1e', '#e8d8c8'], scale: 1.1 });
+    // Falke sitzt auf einer Zinne (gegenüber der Fahne, damit er nicht im Tuch steckt)
+    w.animal('bird', { pos: new THREE.Vector3(-3.75, peak, -34.5), y: peak + 0.92, behavior: 'perch', colors: ['#8a5a2b', '#5b3a1e', '#e8d8c8'], scale: 1.1 });
     w.animal('cat', { pos: V(-28, 4), radius: 3, speed: 0.8, color: '#f08a1f' });
     w.animal('dog', { pos: V(-6, 26), radius: 4, speed: 1.4 });
 
