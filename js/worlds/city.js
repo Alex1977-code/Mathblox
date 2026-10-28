@@ -5,7 +5,7 @@
 import * as THREE from '../../vendor/three.module.min.js';
 import { exitPortal } from './common.js';
 import { pathRide } from '../rides.js';
-import { Kit, boxList, meshOf, roundedLoop, loopMovers } from './city-kit.js';
+import { Kit, boxList, meshOf, roundedLoop } from './city-kit.js';
 import { at, carModel, busModel, vanModel, taxiModel, policeCarModel, fireTruckModel, heliBody, rotorModel } from './city-models.js';
 
 const ASPHALT = '#4a4e57', LINE = '#f4f4f0', YELLOW = '#ffd23f', WALK = '#e2d6c8', SAND = '#f3dca0';
@@ -244,11 +244,47 @@ export const city = {
     for (const x of [-26, -14, 14, 26]) { w.lamp(x, 20.4); w.lamp(x, -11.6); }
     const parked = [['#2f9df6', 3, -16, 0], ['#ff595e', 3, -31, Math.PI], ['#ffffff', 10, -11.2, Math.PI / 2], ['#8ac926', 22, -11.2, Math.PI / 2], ['#b07bff', 16, -4.8, -Math.PI / 2], ['#ffd23f', 26, -4.8, -Math.PI / 2]];
     for (const [c, x, z, ry] of parked) carModel(at(B, x, z, ry), c);
+    // Feste Kästen für abgestellte Fahrzeuge (Länge entlang der Blickrichtung)
+    const parkedSolid = (x, z, ry, len = 4.3, wd = 2.2, h = 1.9) => { const side = Math.abs(Math.sin(ry)) > 0.5; K.solid(x, h, z, side ? len : wd, h, side ? wd : len, '#000', { hidden: true }); };
+    for (const [, x, z, ry] of parked) parkedSolid(x, z, ry);
+    parkedSolid(-24, 30.2, Math.PI / 2, 9.6, 2.5, 3);
+    parkedSolid(-17.5, 45.6, Math.PI / 2);
+    parkedSolid(46.5, 6, 0);
 
-    // ---------------- Fahrende Autos (Deko, nicht fest) ----------------
+    // ---------------- Fahrender Verkehr: fest, hält an, wenn der Spieler im Weg steht ----------------
     const cars = [vehicle(carModel, '#e8262b'), vehicle(busModel, '#2f9df6'), vehicle(carModel, '#ffffff'), vehicle(vanModel, '#ff8a1f'), vehicle(carModel, '#2fbf4a')];
     cars.forEach((c) => w.add(c));
-    w.updaters.push(loopMovers(roundedLoop([[-34, 22], [34, 22], [34, -38], [-34, -38]], 0.05, 4.5), cars, 8));
+    {
+      const curve = new THREE.CatmullRomCurve3(roundedLoop([[-34, 22], [34, 22], [34, -38], [-34, -38]], 0.05, 4.5).map((p) => new THREE.Vector3(...p)), true, 'catmullrom', 0.5);
+      const L = curve.getLength(), tan = new THREE.Vector3(), nxt = new THREE.Vector3();
+      const us = cars.map((_, i) => i / cars.length);
+      const boxes = cars.map((m, i) => { const b = { min: new THREE.Vector3(), max: new THREE.Vector3() }; w.solids.push(b); return b; });
+      const place = (i) => {
+        const m = cars[i];
+        curve.getPointAt(us[i], m.position);
+        curve.getTangentAt(us[i], tan); tan.y = 0;
+        m.lookAt(nxt.copy(m.position).add(tan));
+        const half = i === 1 ? 3.6 : 2.3, ex = Math.abs(tan.x) * half + Math.abs(tan.z) * 1.15, ez = Math.abs(tan.z) * half + Math.abs(tan.x) * 1.15;
+        boxes[i].min.set(m.position.x - ex, 0, m.position.z - ez);
+        boxes[i].max.set(m.position.x + ex, i === 1 ? 3.2 : 1.9, m.position.z + ez);
+      };
+      cars.forEach((_, i) => place(i));
+      w.updaters.push((dt) => {
+        const pp = w.playerPos;
+        cars.forEach((m, i) => {
+          const nu = (us[i] + (8 * dt) / L) % 1;
+          // Abstand zum Vordermann halten
+          const gap = (((us[(i + 1) % cars.length] - nu) % 1) + 1) % 1;
+          if (gap * L < 9) return;
+          curve.getPointAt(nu, nxt);
+          curve.getTangentAt(nu, tan);
+          const ahead = nxt.addScaledVector(tan, 3.2);
+          if (pp && Math.abs(ahead.x - pp.x) < 2.6 && Math.abs(ahead.z - pp.z) < 2.6 && pp.y < 4) return; // Spieler im Weg: warten
+          us[i] = nu;
+          place(i);
+        });
+      });
+    }
 
     // ---------------- Freeway (Hochstraße) mit Rampen ----------------
     K.solid(0, FWY_Y, FWY_Z, 60, 0.8, 10, ASPHALT, { studs: false, safe: true });
@@ -256,10 +292,10 @@ export const city = {
       for (let i = 0; i < 24; i++) { const x = s * (30.5 + i); K.solid(x, fwyY(x), FWY_Z, 1.0, Math.min(0.8, fwyY(x) + 0.7), 10, ASPHALT, { hidden: true, safe: true }); }
       const ang = Math.atan2(FWY_Y, 24), len = Math.hypot(24, FWY_Y);
       B(len, 0.7, 10, ASPHALT, s * 42, FWY_Y / 2 - 0.35, FWY_Z, 0, 0, -s * ang);
-      for (const zz of [-4.85, 4.85]) B(len, 0.8, 0.3, '#e8e2d6', s * 42, FWY_Y / 2 + 0.3, FWY_Z + zz, 0, 0, -s * ang);
-      for (let x = 34; x <= 50; x += 8) for (const zz of [-3, 3]) B(0.9, fwyY(x) - 0.4, 0.9, '#d8d0c4', s * x, (fwyY(x) - 0.4) / 2, FWY_Z + zz);
+      for (const zz of [-4.88, 4.88]) B(len, 0.8, 0.34, '#e8e2d6', s * 42, FWY_Y / 2 + 0.3, FWY_Z + zz, 0, 0, -s * ang);
+      for (let x = 34; x <= 50; x += 8) for (const zz of [-3, 3]) K.solid(s * x, fwyY(x) - 0.4, FWY_Z + zz, 0.9, fwyY(x) - 0.4, 0.9, '#d8d0c4', { studs: false });
     }
-    for (const zz of [-4.85, 4.85]) K.solid(0, FWY_Y + 0.8, FWY_Z + zz, 60, 0.8, 0.3, '#e8e2d6', { studs: false });
+    for (const zz of [-4.88, 4.88]) K.solid(0, FWY_Y + 0.8, FWY_Z + zz, 60, 0.8, 0.34, '#e8e2d6', { studs: false });
     for (let x = -28; x <= 28; x += 3.5) B(1.8, 0.07, 0.22, '#ffffff', x, FWY_Y + 0.04, FWY_Z);
     for (let x = -26; x <= 26; x += 13) for (const zz of [-3, 3]) K.solid(x, FWY_Y - 0.8, FWY_Z + zz, 1.2, FWY_Y - 0.8, 1.2, '#d8d0c4', { studs: false });
     // Schilderbrücke über dem Freeway
@@ -562,14 +598,24 @@ export const city = {
     for (const [x, kind] of [[-30, 'police'], [-16, 'taxi'], [16, 'pizza'], [30, 'sport']]) w.car({ x, z: 26.2, kind, ry: Math.PI / 2 });
     w.sign('Autos: einsteigen und Aufträge erledigen!', 0, 5.2, 21.2, { bg: '#ffc531', fg: '#17233b', size: 0.8 });
     w.star('driver', 0, 16, 26, 'Profi-Fahrer');
-    w.mission({ type: 'taxi', label: 'Taxi zum Strand', start: [-36, 12], time: 60, reward: 35,
-      stages: [{ at: [0, -8], text: 'Hol den Fahrgast an der Kreuzung ab', person: true }, { at: [-52, -40], text: 'Bring ihn zum Strand' }] });
-    w.mission({ type: 'pizza', label: 'Pizza-Blitz', start: [36, 12], time: 55, reward: 35,
-      stages: [{ at: [-36, -8], text: 'Liefere die Pizza in den Westen' }, { at: [36, -40], text: 'Noch eine Pizza in den Norden' }] });
+    // Lieferadressen an den Straßen: jede Tour führt zu anderen, zufällig gewählten Zielen
+    const STOPS = [
+      [36, 4, 'Tankstelle'], [-18, -8, 'Stadtpark'], [-24, 24, 'Feuerwehr'], [-52, -40, 'Strand'], [18, -8, 'Baustelle'],
+      [36, -26, 'Hochhaus'], [0, -24, 'Downtown'], [56, -46, 'Freeway-Ausfahrt'], [-36, 0, 'Pier'], [30, 24, 'Villa'],
+      [0, 24, 'Plaza'], [-36, -26, 'Strandallee'], [-56, -48, 'Westrampe'], [18, -40, 'Nordstraße'],
+    ];
+    w.mission({ type: 'taxi', label: 'Stadt-Taxi', start: [-36, 12], stops: STOPS, pace: 8, reward: 20 });
+    w.mission({ type: 'pizza', label: 'Pizza-Blitz', start: [36, 12], stops: STOPS, count: 4, pace: 8, reward: 20 });
     w.mission({ type: 'race', label: 'Freeway-Rennen', start: [36, -26], time: 60, reward: 50,
       stages: [{ at: [56, -48], text: 'Hoch auf den Freeway!' }, { at: [0, -50], text: 'Über die Hochstraße' }, { at: [-56, -48], text: 'Runter von der Rampe' }, { at: [-36, 24], text: 'Ziel: Strandallee' }] });
-    w.mission({ type: 'police', label: 'Raser stoppen', start: [0, 12], time: 60, reward: 45, speed: 12,
-      path: [[-36, -40], [0, -40], [36, -40], [36, -8], [36, 24], [0, 24], [-36, 24], [-36, -8]] });
+    // Raser: jedes Mal ein anderes Viereck aus dem Straßennetz (Ecken abgerundet)
+    const cityLoop = () => {
+      const xs = [...ROAD_X].sort(() => Math.random() - 0.5).slice(0, 2).sort((a, b) => a - b);
+      const zs = [...ROAD_Z].sort(() => Math.random() - 0.5).slice(0, 2).sort((a, b) => a - b);
+      const pts = roundedLoop([[xs[0], zs[0]], [xs[1], zs[0]], [xs[1], zs[1]], [xs[0], zs[1]]], 0, 4).map(([x, , z]) => [x, z]);
+      return { points: Math.random() < 0.5 ? pts : pts.reverse(), closed: true };
+    };
+    w.mission({ type: 'police', label: 'Raser stoppen', start: [0, 12], time: 60, reward: 45, speed: 12, route: cityLoop });
 
     // ---------------- Tiere ----------------
     const pigeon = ['#9aa1ab', '#7d8590', '#5f6670'], gull = ['#ffffff', '#e6e8ea', '#9aa1ab'];
