@@ -68,6 +68,7 @@ sun.castShadow = true;
 sun.shadow.mapSize.set(1024, 1024);
 Object.assign(sun.shadow.camera, { left: -24, right: 24, top: 24, bottom: -24, near: 1, far: 90 });
 sun.shadow.bias = -0.0008;
+sun.shadow.normalBias = 0.04; // gegen Schatten-Streifen auf großen flachen Flächen (v. a. Safari)
 scene.add(sun, sun.target);
 // Schattenkamera nur in ganzen Schatten-Pixeln verschieben, sonst flimmern die Schattenkanten beim Laufen
 const SUN_OFFSET = new THREE.Vector3(14, 30, 10);

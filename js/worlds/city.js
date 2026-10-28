@@ -72,14 +72,14 @@ export const city = {
     road(-56, -44, -56, -54); road(56, -44, 56, -54); // Auffahrten zum Freeway
     const nearX = (v) => ROAD_X.some((x) => Math.abs(v - x) < 7.5);
     const nearZ = (v) => ROAD_Z.some((z) => Math.abs(v - z) < 7.5);
-    for (const z of ROAD_Z) for (let x = z === -40 ? -56 : -38; x <= (z === -40 ? 56 : 38); x += 3.5) if (!nearX(x)) B(1.8, 0.07, 0.22, YELLOW, x, 0.04, z);
-    for (const x of ROAD_X) for (let z = -42; z <= 26; z += 3.5) if (!nearZ(z)) B(0.22, 0.07, 1.8, YELLOW, x, 0.04, z);
+    for (const z of ROAD_Z) for (let x = z === -40 ? -56 : -38; x <= (z === -40 ? 56 : 38); x += 3.5) if (!nearX(x)) B(1.8, 0.07, 0.22, YELLOW, x, 0.065, z);
+    for (const x of ROAD_X) for (let z = -42; z <= 26; z += 3.5) if (!nearZ(z)) B(0.22, 0.07, 1.8, YELLOW, x, 0.065, z);
     for (const z of ROAD_Z) for (const s of [-1, 1]) for (const [xa, xb] of [[-32, -4], [4, 32]]) B(xb - xa, 0.12, 0.3, '#f4ece2', (xa + xb) / 2, 0.06, z + s * 4.15);
     for (const x of ROAD_X) for (const s of [-1, 1]) for (const [za, zb] of [[-36, -12], [-4, 20]]) B(0.3, 0.12, zb - za, '#f4ece2', x + s * 4.15, 0.06, (za + zb) / 2);
     for (const X of ROAD_X) for (const Z of ROAD_Z) {
       for (const s of [-1, 1]) for (let k = -3; k <= 3; k++) {
-        B(2, 0.07, 0.55, LINE, X + s * 5.6, 0.045, Z + k * 1.1);
-        B(0.55, 0.07, 2, LINE, X + k * 1.1, 0.045, Z + s * 5.6);
+        B(2, 0.07, 0.55, LINE, X + s * 5.6, 0.065, Z + k * 1.1);
+        B(0.55, 0.07, 2, LINE, X + k * 1.1, 0.065, Z + s * 5.6);
       }
       for (const [sx, sz, red] of [[1, 1, true], [-1, -1, false]]) {
         const px = X + sx * 4.8, pz = Z + sz * 4.8;
@@ -190,9 +190,9 @@ export const city = {
     carModel(at(B, 46.5, 6, 0), '#2f9df6');
 
     // ---------------- Park mit Brunnen und Ententeich ----------------
-    B(28, 0.08, 24, '#7cc24a', -18, 0.04, -24);
-    w.path(-32, -24, -4, -24, 2.4, '#f0e2c0');
-    w.path(-18, -36, -18, -12, 2.4, '#f0e2c0');
+    B(28, 0.04, 24, '#7cc24a', -18, 0.02, -24);
+    B(28, 0.06, 2.4, '#f0e2c0', -18, 0.07, -24);
+    B(2.4, 0.06, 24, '#f0e2c0', -18, 0.09, -24);
     for (const [x, z, ww, dd] of [[-18, -27.6, 7.8, 0.8], [-18, -20.4, 7.8, 0.8], [-21.6, -24, 0.8, 6.4], [-14.4, -24, 0.8, 6.4]]) K.solid(x, 0.6, z, ww, 0.6, dd, '#e8dcc8', { studs: false, safe: true });
     w.water(-18, -24, 6.4, 6.4, { top: 0.45, color: '#5cc8ff' });
     K.solid(-18, 2.4, -24, 1, 2.4, 1, '#e8dcc8', { studs: false });
@@ -202,7 +202,7 @@ export const city = {
     w.add(jet);
     w.updaters.push((dt, t) => { jet.scale.y = 1 + Math.sin(t * 4) * 0.15; });
     w.coinRing(-18, 0, -24, 6.5, 10);
-    w.water(-9, -31, 8, 6, { color: '#4fb8f0' });
+    w.water(-9, -31, 8, 6, { top: 0.16, color: '#4fb8f0' });
     for (let i = 0; i < 4; i++) w.animal('duck', { pos: new THREE.Vector3(-10 + i, 0.05, -31), behavior: 'swim', radius: 2.5, speed: 0.7, hungry: i === 0 });
     for (const [x, z, ry] of [[-26, -21.5, 0], [-10, -21.5, 0], [-26, -26.5, Math.PI], [-21, -15, Math.PI / 2]]) {
       const bb = at(B, x, z, ry);
@@ -224,7 +224,7 @@ export const city = {
 
     // ---------------- Plaza am Portal ----------------
     B(24, 0.06, 28, '#f6e6cf', 0, 0.035, 43);
-    for (let i = 0; i < 6; i++) B(24, 0.07, 0.25, '#e8cfae', 0, 0.04, 31 + i * 4.5);
+    for (let i = 0; i < 6; i++) B(24, 0.07, 0.25, '#e8cfae', 0, 0.065, 31 + i * 4.5);
     for (const s of [-1, 1]) {
       K.solid(s * 9, 0.5, 40, 4, 0.5, 4, '#e8cfae', { studs: false });
       B(3.6, 0.1, 3.6, '#7cc24a', s * 9, 0.52, 40);
@@ -312,9 +312,9 @@ export const city = {
     w.water(44, -57.5, 9, 3, { top: 8.08, color: '#5fe0f0' });
 
     // ---------------- Strand mit Pier, Riesenrad und Rettungstürmen (Westen) ----------------
-    B(17, 0.08, 91.5, SAND, -49.5, 0.04, 10.25);
-    B(17, 0.08, 13.5, SAND, -49.5, 0.04, -51.25);
-    w.path(-42.6, -35, -42.6, 58, 2.2, '#f7c9b8');
+    B(17, 0.03, 91.5, SAND, -49.5, 0.015, 10.25);
+    B(17, 0.03, 13.5, SAND, -49.5, 0.015, -51.25);
+    B(2.2, 0.06, 95.2, '#f7c9b8', -42.6, 0.06, 11.5); // Promenade, klar über Sand und Straße
     const tower2 = (x, z, c) => {
       const L = at(B, x, z, -Math.PI / 2);
       for (const [dx, dz] of [[-0.9, -0.9], [0.9, -0.9], [-0.9, 0.9], [0.9, 0.9]]) L(0.2, 2.2, 0.2, '#f4f4f0', dx, 1.1, dz);
