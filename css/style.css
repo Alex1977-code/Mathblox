@@ -438,6 +438,11 @@ sup { font-size: 0.6em; }
 
 /* Hochformat: Shop unten, Avatar oben sichtbar */
 @media (orientation: portrait) {
+  /* Einsteigen-Knopf über den Sprungknopf statt neben den Joystick */
+  .action-btn {
+    right: calc(max(24px, env(safe-area-inset-right, 0px)) + 4px);
+    bottom: calc(max(24px, env(safe-area-inset-bottom, 0px)) + 138px);
+  }
   #shop { background: linear-gradient(180deg, transparent 0 38%, var(--overlay) 38%); }
   #shop > * { margin: auto auto 0; }
   #shop .shop-grid { max-height: 26vh; }
